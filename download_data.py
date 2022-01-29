@@ -1,8 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
-import pdfplumber
-from io import BytesIO
 import json
+from pdf2image import convert_from_bytes
+import pytesseract
 
 
 archives = ["astro-ph", "cond-mat", "cs", "econ", "eess", "gr-qc", "hep-ex", "hep-lat",
@@ -20,11 +20,13 @@ def extract_metadata(homepage):
     record["DOI"] = f"arXiv:{id}"
     return record
 
-def pdf2text(content):
+def pdf2text(pdf):
     text = ""
-    with pdfplumber.open(content) as pdf:
-        for page in pdf.pages:
-            text += page.extract_text()
+    # Convert PDF to image
+    pages = convert_from_bytes(pdf)
+    # OCR to convert image to text
+    for page in pages:
+        text += str((pytesseract.image_to_string(page))).replace('\n', '')
     return text
 
 def save_record(record, file):
@@ -63,5 +65,5 @@ with open('data.ndjson', 'w') as f:
         homepage = BeautifulSoup(response.text, 'html.parser')
         record = extract_metadata(homepage)
         pdf = requests.get(f"https://arxiv.org/pdf/{id}.pdf")
-        record['Text'] = pdf2text(BytesIO(pdf.content))
+        record['Text'] = pdf2text(pdf.content)
         save_record(record, f)
