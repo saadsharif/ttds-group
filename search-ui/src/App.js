@@ -62,7 +62,7 @@ export default function App() {
                       titleField="title"
                       urlField="url"
                       thumbnailField="image_url"
-                      shouldTrackClickThrough={true}
+                      shouldTrackClickThrough={false}
                     />
                   }
                   bodyHeader={

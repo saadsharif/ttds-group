@@ -1,3 +1,4 @@
+import axios from "axios";
 
 export default class SearchAPI {
     onResultClick({ query, documentId, tags }) {
@@ -10,16 +11,36 @@ export default class SearchAPI {
 
     }
 
-
-    onSearch(state, queryConfig) {
-        debugger;
-
     
+    onSearch(state, queryConfig) {
+        const toObjectWithRaw = value => ({ raw: value })
+        const addEachKeyValueToObject = (acc, [key, value]) => ({
+            ...acc,
+            [key]: value
+          });
+          
+        return axios.post('/search',{
+            "query": state.searchTerm
+        }).then(response =>
+            response.data
+        ).then(results => {
+            return {
+                resultSearchTerm: state.searchTerm,
+                results: results.results.map(result => {
+                    return Object.entries(result).map(([fieldName, fieldValue]) => [
+                        fieldName,
+                        toObjectWithRaw(fieldValue)
+                      ]).reduce(addEachKeyValueToObject, {});
+                }),
+                totalResults: results.total_hits,
+                facets: [],
+                requestId: results.request_id
+            }
+        })    
     }
 
     async onAutocomplete({ searchTerm }, queryConfig) {
         console.log("CALLED")
-        debugger;
     }
 
 }

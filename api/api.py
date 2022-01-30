@@ -8,7 +8,7 @@ from models.search import SearchSchema
 app = Flask(__name__)
 
 # hardcoded response for now
-results = Results(100, [Result('http://random-%s'% i,'random title - %s'
+results = Results(100, [Result(i, 'http://random-%s'% i,'random title - %s'
                                % i, 'random document description') for i in range(10)])
 
 
