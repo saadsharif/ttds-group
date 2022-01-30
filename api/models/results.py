@@ -2,12 +2,14 @@ from marshmallow import Schema, fields
 
 
 class Result:
-    def __init__(self, title, description):
+    def __init__(self, url, title, description):
+        self.url = url
         self.title = title
         self.description = description
 
 
 class ResultSchema(Schema):
+    url = fields.Str()
     title = fields.Str()
     description = fields.Str()
 

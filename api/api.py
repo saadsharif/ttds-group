@@ -8,7 +8,7 @@ from models.search import SearchSchema
 app = Flask(__name__)
 
 # hardcoded response for now
-results = Results(100, [Result('random title - %s'
+results = Results(100, [Result('http://random-%s'% i,'random title - %s'
                                % i, 'random document description') for i in range(10)])
 
 
@@ -16,6 +16,7 @@ results = Results(100, [Result('random title - %s'
 def search():
     try:
         searchRequest = SearchSchema().load(request.get_json())
+        # TODO: Pass the request to API and marshall the responses
     except ValidationError as e:
         return jsonify(SearchErrorSchema().dump(SearchError("unable to parse search request", e.messages))), 400
     return jsonify(ResultsSchema().dump(results)), 200

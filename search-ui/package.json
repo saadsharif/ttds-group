@@ -1,21 +1,16 @@
 {
-  "name": "search-app",
+  "name": "search-ui",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@elastic/react-search-ui": "^1.9.0",
     "@testing-library/jest-dom": "^5.16.1",
     "@testing-library/react": "^12.1.2",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^0.25.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "react-overridable": "^0.0.3",
-    "react-redux": "^7.2.6",
     "react-scripts": "5.0.0",
-    "react-searchkit": "^1.0.0-alpha.17",
-    "react-thunk": "^1.0.0",
-    "redux-thunk": "^2.4.1",
-    "semantic-ui-react": "^2.1.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
