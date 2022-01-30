@@ -1,0 +1,6 @@
+Average document processing time (in seconds)
+
+Pdfminer: 9.489939737319947
+Tika: 0.371908974647522
+PyPDF2: 4.649654984474182
+Pdfplumber: 12.145875310897827
