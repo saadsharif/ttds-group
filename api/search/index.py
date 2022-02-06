@@ -2,8 +2,11 @@ import itertools
 import math
 import pickle
 import uuid
-
+from bidict import bidict
 from search.analyzer import Analyzer
+from search.exception import IndexException
+from search.posting import TermPostings
+from search.query import Query
 
 
 class Index:
@@ -17,8 +20,9 @@ class Index:
         # we maintain to generate doc ids but use use this for NOT queries
         self._current_doc_id = 1
         # mapping of external and internal id - used to ensure we always use an incremental doc id and check external
-        # ids are unique - we may want to move this to uniqueness to an external check in future
-        self._id_mappings = {}
+        # ids are unique - we may want to move this to uniqueness to an external check in future. For this reason,
+        # the dict is bi-directional. internal->external, whilst inverse is external to internal.
+        self._id_mappings = bidict()
         # store of document id to their terms - used for Psuedo Relevance Feedback
         self._doc_store = {}
 
@@ -55,19 +59,24 @@ class Index:
 
     # this is an append only operation. We generated a new internal id for the document and store a mapping between the
     # the two. The passed id here must be unique - no updates supported, but can be anything.
-    def add_document(self, id, text):
-        if id in self._id_mappings:
-            raise Exception(f'{id} already exists in index {self._index_id}')
-        self._id_mappings[self._current_doc_id] = id
+    def add_document(self, document):
+        if document.id in self._id_mappings.inverse:
+            raise IndexException(f'{document.id} already exists in index {self._index_id}')
+        self._id_mappings[self._current_doc_id] = document.id
+        # TODO: no separate indices per field currently - we might want to add this
+        text = f'{document.title} {document.subject} {document.abstract} {document.text}'
         terms = self.analyzer.process(text)
-        self._doc_store[id] = terms
+        # disabling doc_store - to save memory
+        #self._doc_store[document.id] = terms
         p = 0
         for term in terms:
             if term not in self._index:
                 self._index[term] = TermPostings()
             self._index[term].add_position(self._current_doc_id, p)
             p += 1
+        doc_id = self._current_doc_id
         self._current_doc_id += 1
+        return doc_id
 
     def search(self, query, score, max_results):
         docs = Query(self).execute(query, score,  max_results)
