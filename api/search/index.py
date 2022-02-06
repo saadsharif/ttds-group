@@ -8,12 +8,10 @@ from search.analyzer import Analyzer
 
 class Index:
 
-    def __init__(self, analyzer=Analyzer(), index_id=uuid.uuid4(), implicit_boolean=BooleanOp.OR):
+    def __init__(self, analyzer=Analyzer(), index_id=uuid.uuid4()):
         self.analyzer = analyzer
         # auto generate an index id if not provided
         self._index_id = index_id
-        # by default we assume multi term queries are OR
-        self._implicit_boolean = implicit_boolean
         # for now we use a hash for the term dictionary - in future we may want to use a tree here
         self._index = {}
         # we maintain to generate doc ids but use use this for NOT queries
