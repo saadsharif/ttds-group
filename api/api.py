@@ -78,5 +78,13 @@ def index_doc():
 
 # TODO: we need a bulk end point where we can send batches of N documents (as ndjson)
 
+# this saves the current index in memory to disk - currently a blocking call
+# TODO: we should only allow one of these to occur at once and we need to make it incremental -
+#  it should probably create a new file
+@app.route('/flush', methods=['POST','GET'])
+def flush():
+    index.save('index.db')
+    return jsonify({'ok': True}), 200
+
 if __name__ == '__main__':
     app.run()

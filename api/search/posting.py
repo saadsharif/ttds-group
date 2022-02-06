@@ -48,7 +48,8 @@ class TermPostings:
         self._postings = []
 
     def add_position(self, doc_id, position):
-        # we assume single threaded index construction and that one doc is added at a time
+        # we assume single threaded index construction and that one doc is added at a time - we thus create
+        # a new posting when the doc id changes
         if len(self._postings) == 0 or self._postings[-1].doc_id != doc_id:
             self._postings.append(Posting(doc_id))
         self._postings[-1].add_position(position)

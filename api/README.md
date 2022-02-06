@@ -45,3 +45,10 @@ curl --location --request POST 'http://127.0.0.1:5000/index' \
 '
 ```
 
+### Save Index
+
+Persists the current index to disk. Currently, not incremental and causes a complete re-write.
+
+```bash
+curl --location --request POST 'http://127.0.0.1:5000/flush'
+```

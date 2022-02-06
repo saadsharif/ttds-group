@@ -67,7 +67,7 @@ class Index:
         # TODO: no separate indices per field currently - we might want to add this
         terms = self.analyzer.process_document(document)
         # disabling doc_store - to save memory
-        #self._doc_store[document.id] = terms
+        # self._doc_store[document.id] = terms
         p = 0
         for term in terms:
             if term not in self._index:
