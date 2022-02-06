@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from 'axios';
 
 export default class SearchAPI {
     onResultClick({ query, documentId, tags }) {
@@ -20,13 +20,15 @@ export default class SearchAPI {
           });
           
         return axios.post('/search',{
-            "query": state.searchTerm
+            'query': state.searchTerm,
+            'max_results': 10,
+
         }).then(response =>
             response.data
         ).then(results => {
             return {
                 resultSearchTerm: state.searchTerm,
-                results: results.results.map(result => {
+                results: results.hits.map(result => {
                     return Object.entries(result).map(([fieldName, fieldValue]) => [
                         fieldName,
                         toObjectWithRaw(fieldValue)
@@ -40,7 +42,7 @@ export default class SearchAPI {
     }
 
     async onAutocomplete({ searchTerm }, queryConfig) {
-        console.log("CALLED")
+        
     }
 
 }

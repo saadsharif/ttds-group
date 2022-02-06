@@ -1,5 +1,5 @@
 import './App.css';
-import React from "react";
+import React from 'react';
 import { useState, useEffect } from 'react';
 import {
   ErrorBoundary,
@@ -10,11 +10,12 @@ import {
   ResultsPerPage,
   Paging,
   WithSearch
-} from "@elastic/react-search-ui";
-import { Layout } from "@elastic/react-search-ui-views";
+} from '@elastic/react-search-ui';
+import { Layout } from '@elastic/react-search-ui-views';
 import SearchAPI from './api/api';
 import axios from 'axios';
 import "@elastic/react-search-ui-views/lib/styles/styles.css";
+
 
 const connector = new SearchAPI();
 
@@ -36,7 +37,7 @@ export default function App() {
   }
 
   if (isLoading) {
-    return <div className="App">Loading...</div>;
+    return <div className='App'>Loading...</div>;
   }
   console.log(config)
   return (
@@ -48,7 +49,7 @@ export default function App() {
       <WithSearch mapContextToProps={({ wasSearched }) => ({ wasSearched })}>
         {({ wasSearched }) => {
           return (
-            <div className="App">
+            <div className='App'>
               <ErrorBoundary>
                 <Layout
                   header={
@@ -56,19 +57,23 @@ export default function App() {
                       autocompleteSuggestions={true}
                       debounceLength={0}
                     />
+                    
                   }
                   bodyContent={
+                    <>
+                    
                     <Results
-                      titleField="title"
-                      urlField="url"
-                      thumbnailField="image_url"
+                      titleField='title'
+                      urlField='url'
+                      thumbnailField='image_url'
                       shouldTrackClickThrough={false}
                     />
+                    </>
                   }
                   bodyHeader={
                     <React.Fragment>
                       {wasSearched && <PagingInfo />}
-                      {wasSearched && <ResultsPerPage />}
+                      {wasSearched && <ResultsPerPage options={[10, 20, 50]} />}
                     </React.Fragment>
                   }
                   bodyFooter={<Paging />}

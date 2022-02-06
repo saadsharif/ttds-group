@@ -1,5 +1,6 @@
 import itertools
 import math
+import os
 import pickle
 import uuid
 from bidict import bidict
@@ -8,11 +9,14 @@ from search.exception import IndexException
 from search.models import Result
 from search.posting import TermPostings
 from search.query import Query
+from search.store import DocumentStore
 
 
 class Index:
 
-    def __init__(self, analyzer=Analyzer(), index_id=uuid.uuid4()):
+    def __init__(self, storage_path, analyzer=Analyzer(), index_id=uuid.uuid4()):
+        # location of index files
+        self._storage_path = storage_path
         self.analyzer = analyzer
         # auto generate an index id if not provided
         self._index_id = index_id
@@ -25,12 +29,32 @@ class Index:
         # the dict is bi-directional. internal->external, whilst inverse is external to internal.
         self._id_mappings = bidict()
         # store of document id to their terms - used for Psuedo Relevance Feedback
-        self._doc_store = {}
+        self._doc_term_store = {}
+        # document store so we can return the original docs - flag c open if it exists
+        self._doc_store = DocumentStore.open(os.path.join(self._storage_path, 'docs.db'), 'c')
+        pass
+
+    def _get_db_path(self):
+        return os.path.join(self._storage_path, 'index.idb')
 
     # saves the index to disk - for now just pickle down given the sizes
-    def save(self, output_path):
-        with open(output_path, 'wb') as index_file:
-            pickle.dump(self.__dict__, index_file)
+    def save(self):
+        self._doc_store.sync()
+        with open(self._get_db_path(), 'wb') as index_file:
+            state = self.__dict__.copy()
+            del state['_doc_store']
+            pickle.dump(state, index_file)
+
+    def load(self):
+        if os.path.isfile(self._get_db_path()):
+            with open(self._get_db_path(), 'rb') as index_file:
+                index = pickle.load(index_file)
+                self.__dict__.update(index)
+
+    # closes the index
+    def close(self):
+        self.save()
+        self._doc_store.close()
 
     # dumps to readable format
     def dump(self):
@@ -38,12 +62,6 @@ class Index:
             print(f'{term}:{postings.doc_frequency}')
             for posting in postings:
                 print(f'\t{posting.doc_id}: {",".join([str(pos) for pos in posting])}')
-
-    # loads an index from disk. Warning - overwrites any existing data in this index.
-    def load(self, input_path):
-        with open(input_path, 'rb') as index_file:
-            index = pickle.load(index_file)
-            self.__dict__.update(index)
 
     # merges this index to another index and returns a new one
     def merge(self, index):
@@ -66,8 +84,8 @@ class Index:
         self._id_mappings[self._current_doc_id] = document.id
         # TODO: no separate indices per field currently - we might want to add this
         terms = self.analyzer.process_document(document)
-        # disabling doc_store - to save memory
-        # self._doc_store[document.id] = terms
+        # disabling doc_term_store - to save memory
+        # self.doc_term_store[document.id] = terms
         p = 0
         for term in terms:
             if term not in self._index:
@@ -75,13 +93,15 @@ class Index:
             self._index[term].add_position(self._current_doc_id, p)
             p += 1
         doc_id = self._current_doc_id
+        # persist to the bd
+        self._doc_store[str(doc_id)] = document.fields
         self._current_doc_id += 1
         return doc_id
 
     def search(self, query):
-        docs, total = Query(self).execute(query.query, query.score,  query.max_results)
+        docs, total = Query(self).execute(query.query, query.score, query.max_results)
         # for now we just map the ids but in future we could fetch the docs from a store e.g. disk
-        return [Result(self._id_mappings[doc.doc_id], doc.score) for doc in docs], total
+        return [Result(self._id_mappings[doc.doc_id], doc.score, fields=self._doc_store.get(str(doc.doc_id))) for doc in docs], total
 
     def get_term(self, term):
         if term in self._index:
@@ -89,8 +109,8 @@ class Index:
         return []
 
     def get_terms(self, doc_id):
-        if doc_id in self._doc_store:
-            return self._doc_store[doc_id]
+        if doc_id in self._doc_term_store:
+            return self._doc_term_store[doc_id]
         return []
 
     def get_top_terms(self, doc_ids, count, filter_numeric=True, filter_terms=[]):
@@ -105,6 +125,6 @@ class Index:
         scores = {}
         for term, term_freq in freq.items():
             doc_freq = self._index[term].doc_frequency
-            scores[term] = term_freq * math.log10(self.number_of_docs/doc_freq)
+            scores[term] = term_freq * math.log10(self.number_of_docs / doc_freq)
         sorted_terms = {k: v for k, v in sorted(scores.items(), key=lambda item: item[1], reverse=True)}
         return dict(itertools.islice(sorted_terms.items(), count))

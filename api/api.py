@@ -1,3 +1,4 @@
+import atexit
 import os
 
 from flask import Flask, jsonify, request
@@ -12,27 +13,21 @@ from models.search import SearchSchema
 from search.analyzer import Analyzer
 from search.exception import IndexException
 from search.index import Index
-from search.models import Search, Document
 from search.utils import load_stop_words
 
-index = Index()
+index = None
 
 
 def load_index():
     global index
-    # later we can make this path configurable
-    if not os.path.isfile('index.db'):
-        # no db has been created
-        print('Initializing new index...')
-        # maybe this could be a parameter later
-        stop_words = load_stop_words('stop_words.txt')
-        # we stem and enable stop words for now
-        index = Index(Analyzer(stop_words, True))
-        # creates it to disk
-        index.save('index.db')
-    else:
-        print('Loading existing index from index.db...')
-        index.load('index.db')
+    # maybe this could be a parameter later
+    stop_words = load_stop_words('stop_words.txt')
+    # for now always current directory - maybe pass in future
+    index_dir = os.path.join(os.getcwd(), 'index')
+    os.makedirs(index_dir, exist_ok=True)
+    # we stem and enable stop words for now
+    index = Index(index_dir, Analyzer(stop_words, True))
+    index.load()
     print('Index ready')
 
 
@@ -81,10 +76,19 @@ def index_doc():
 # this saves the current index in memory to disk - currently a blocking call
 # TODO: we should only allow one of these to occur at once and we need to make it incremental -
 #  it should probably create a new file
-@app.route('/flush', methods=['POST','GET'])
+@app.route('/flush', methods=['POST', 'GET'])
 def flush():
-    index.save('index.db')
+    index.save()
     return jsonify({'ok': True}), 200
+
+
+def on_exit_api():
+    global index
+    print('Closing search index')
+    index.close()
+
+
+atexit.register(on_exit_api)
 
 if __name__ == '__main__':
     app.run()

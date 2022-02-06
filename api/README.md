@@ -14,7 +14,7 @@ The following will start the API on port 5000:
 
 `python api.py`
 
-The index will be created in the local directory as `index.db`.
+The index will be created in the local directory under `./index`
 
 ## Test Request
 
