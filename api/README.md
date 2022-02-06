@@ -14,8 +14,11 @@ The following will start the API on port 5000:
 
 `python api.py`
 
+The index will be created in the local directory as `index.db`.
+
 ## Test Request
 
+### Search
 
 ```bash
 curl --location --request POST 'http://127.0.0.1:5000/search' \
@@ -24,3 +27,21 @@ curl --location --request POST 'http://127.0.0.1:5000/search' \
     "query": "test"
 }'
 ```
+
+### Indexing
+
+
+```bash
+curl --location --request POST 'http://127.0.0.1:5000/index' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "title": "The theory of everything",
+  "authors": "Charles Darwin",
+  "abstract": "an abstract ",
+  "subject": "a subject",
+  "id": "arXiv:2201.00002",
+  "text": "Some text"
+}
+'
+```
+
