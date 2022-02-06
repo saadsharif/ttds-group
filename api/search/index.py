@@ -5,6 +5,7 @@ import uuid
 from bidict import bidict
 from search.analyzer import Analyzer
 from search.exception import IndexException
+from search.models import Result
 from search.posting import TermPostings
 from search.query import Query
 
@@ -64,8 +65,7 @@ class Index:
             raise IndexException(f'{document.id} already exists in index {self._index_id}')
         self._id_mappings[self._current_doc_id] = document.id
         # TODO: no separate indices per field currently - we might want to add this
-        text = f'{document.title} {document.subject} {document.abstract} {document.text}'
-        terms = self.analyzer.process(text)
+        terms = self.analyzer.process_document(document)
         # disabling doc_store - to save memory
         #self._doc_store[document.id] = terms
         p = 0
@@ -78,11 +78,10 @@ class Index:
         self._current_doc_id += 1
         return doc_id
 
-    def search(self, query, score, max_results):
-        docs = Query(self).execute(query, score,  max_results)
+    def search(self, query):
+        docs, total = Query(self).execute(query.query, query.score,  query.max_results)
         # for now we just map the ids but in future we could fetch the docs from a store e.g. disk
-        for doc in docs:
-            yield self._id_mappings[doc.doc_id], doc.score
+        return [Result(self._id_mappings[doc.doc_id], doc.score) for doc in docs], total
 
     def get_term(self, term):
         if term in self._index:

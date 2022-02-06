@@ -39,3 +39,6 @@ class Analyzer:
     def process(self, text):
         tokens = self._tokenize(text)
         return self._process_tokens(tokens)
+
+    def process_document(self, doc):
+        return self.process(str(doc))

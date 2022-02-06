@@ -1,14 +1,6 @@
-from marshmallow import Schema, fields
+from marshmallow import Schema, fields, post_load
 
-
-class Document:
-    def __init__(self, id, title, authors, abstract, subject, text):
-        self.id = id
-        self.title = title
-        self.authors = authors
-        self.abstract = abstract
-        self.subject = subject
-        self.text = text
+from search.models import Document
 
 
 class DocumentSchema(Schema):
@@ -18,3 +10,13 @@ class DocumentSchema(Schema):
     abstract = fields.Str()
     subject = fields.Str()
     text = fields.Str()
+
+    @post_load
+    def make_document(self, data, **kwargs):
+        return Document(data['id'], fields={
+            'title': data['title'],
+            'authors': data['authors'],
+            'abstract': data['abstract'],
+            'subject': data['subject'],
+            'text': data['text']
+        })

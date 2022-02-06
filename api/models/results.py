@@ -3,29 +3,20 @@ import uuid
 from marshmallow import Schema, fields
 
 
-class Result:
-    def __init__(self, id, url, title, description):
-        self.id = id
-        self.url = url
-        self.title = title
-        self.description = description
-
-
 class ResultSchema(Schema):
     id = fields.Str()
-    url = fields.Str()
-    title = fields.Str()
-    description = fields.Str()
+    score = fields.Float()
+    fields = fields.Dict()
 
 
 class Results:
-    def __init__(self, total_hits, results):
+    def __init__(self, hits, total_hits):
         self.total_hits = total_hits
-        self.results = results
+        self.hits = hits
         self.request_id = str(uuid.uuid1())
 
 
 class ResultsSchema(Schema):
-    results = fields.List(fields.Nested(ResultSchema))
+    hits = fields.List(fields.Nested(ResultSchema))
     total_hits = fields.Int()
     request_id = fields.Str()

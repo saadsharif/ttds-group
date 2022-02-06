@@ -238,6 +238,5 @@ class Query:
         parsed = self._parser(query)
         docs = self.evaluate(parsed[0], score=score)
         if score:
-            return heapq.nlargest(max_results, docs, key=lambda doc: doc.score)
-        return heapq.nsmallest(max_results, docs, key=lambda doc: doc.doc_id)
-        # TODO: maybe we want to return top N but also total? right now limiting results, prevents this.
+            return heapq.nlargest(max_results, docs, key=lambda doc: doc.score), len(docs)
+        return heapq.nsmallest(max_results, docs, key=lambda doc: doc.doc_id), len(docs)
