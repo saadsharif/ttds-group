@@ -4,4 +4,6 @@ itsdangerous==2.0.1
 Jinja2==3.0.3
 MarkupSafe==2.0.1
 marshmallow==3.14.1
+pyparsing==3.0.7
+stemming==1.0.1
 Werkzeug==2.0.2
