@@ -22,5 +22,9 @@ def search():
     return jsonify(ResultsSchema().dump(results)), 200
 
 
+@app.route("/index", methods=['POST'])
+def index():
+    pass
+
 if __name__ == "__main__":
     app.run()

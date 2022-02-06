@@ -12,6 +12,8 @@ from pyparsing import (
     oneOf,
 )
 
+from search.posting import ScoredPosting
+
 
 class Query:
 

@@ -1,3 +1,5 @@
+import re
+
 from stemming.porter2 import stem as porter_stem
 
 

@@ -3,6 +3,8 @@ import math
 import pickle
 import uuid
 
+from search.analyzer import Analyzer
+
 
 class Index:
 
