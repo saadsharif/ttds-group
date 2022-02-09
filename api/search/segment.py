@@ -46,9 +46,11 @@ class Segment:
         p = 0
         for term in terms:
             if term not in self._buffer:
-                self._buffer[term] = TermPostings()
+                term_posting = TermPostings()
+                self._buffer[term] = term_posting
             self._buffer[term].add_position(doc_id, p)
             p += 1
+        self._number_of_documents += 1
         self._indexing_lock.release_write()
 
     def get_term(self, term):
@@ -73,7 +75,7 @@ class Segment:
     def flush(self):
         # whilst we're flushing, reads can continue on the buffer. Indexing can't.
         self._indexing_lock.acquire_write()
-        for key, values in self._buffer:
+        for key, values in self._buffer.items():
             self._index[key] = values
         # this flush is just to prevent queries from reading an empty buffer - might not be needed. Note we do this
         # only for the period of clearing the buffer - not during flushing - very short period

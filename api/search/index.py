@@ -51,7 +51,7 @@ class Index:
             del state['_doc_store']
             del state['_write_lock']
             pickle.dump(state, index_file)
-        self.__get_current_segment(self).flush()
+        self.__get_current_segment().flush()
         self._write_lock.release_write()
 
     def load(self):
@@ -99,13 +99,13 @@ class Index:
         most_recent = self._segments[0]
         if not most_recent.is_open():
             # segment has been flushed, create a new one
-            self._segments.index(0, Segment(self._storage_path))
+            self._segments.index(0, Segment(_create_segment_id(),self._storage_path))
             return self._segments[0]
         if not most_recent.has_capacity():
             # segment is open but has no capacity so flush
             most_recent.flush()
             # insert new
-            self._segments.index(0, Segment(self._storage_path))
+            self._segments.index(0, Segment(_create_segment_id(), self._storage_path))
         return self._segments[0]
 
     # this is an append only operation. We generated a new internal id for the document and store a mapping between the
@@ -114,6 +114,7 @@ class Index:
         # enforce single threaded indexing
         self._write_lock.acquire_write()
         if document.id in self._id_mappings.inverse:
+            self._write_lock.release_write()
             raise IndexException(f'{document.id} already exists in index {self._index_id}')
         self._id_mappings[self._current_doc_id] = document.id
         # TODO: no separate indices per field currently - we might want to add this
