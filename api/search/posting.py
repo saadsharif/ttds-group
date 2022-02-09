@@ -1,3 +1,5 @@
+import json
+
 
 class ScoredPosting:
     def __init__(self, posting, score=0):
@@ -17,8 +19,8 @@ class ScoredPosting:
 
 
 class Posting:
-    def __init__(self, doc_id):
-        self._positions = []
+    def __init__(self, doc_id, positions=[]):
+        self._positions = positions
         self._doc_id = doc_id
 
     @property
@@ -40,12 +42,22 @@ class Posting:
     def __iter__(self):
         return iter(self._positions)
 
+    def to_store_format(self):
+        return {
+            "id": self._doc_id,
+            "pos": self._positions
+        }
+
+    @staticmethod
+    def from_store_format(data):
+        return Posting(data["id"], data["pod"])
+
 
 class TermPostings:
 
-    def __init__(self):
-        self._collection_frequency = 0
-        self._postings = []
+    def __init__(self, collecting_frequency=0, postings=[]):
+        self._collection_frequency = collecting_frequency
+        self._postings = postings
 
     def add_position(self, doc_id, position):
         # we assume single threaded index construction and that one doc is added at a time - we thus create
@@ -70,3 +82,16 @@ class TermPostings:
 
     def __iter__(self):
         return iter(self._postings)
+
+    # TODO: These could be significantly improved. They determine how are postings are stored on disk -
+    #  currently json encoded (cpu ands space wasteful)
+    def to_store_format(self):
+        return json.dumps({
+            "cf": self._collection_frequency,
+            "p": [posting.to_store_format() for posting in self._postings]
+        })
+
+    @staticmethod
+    def from_store_format(data):
+        value = json.loads(data)
+        return TermPostings(value["cf"], [Posting.from_store_format(posting) for posting in value["p"]])
