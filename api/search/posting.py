@@ -1,5 +1,4 @@
-import json
-
+import ujson as json
 
 class ScoredPosting:
     def __init__(self, posting, score=0):

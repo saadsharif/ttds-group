@@ -5,7 +5,7 @@ from stemming.porter2 import stem as porter_stem
 
 class Analyzer:
     def __init__(self, stop_words=[], stem=True):
-        self._stop_words = stop_words
+        self._stop_words = set(stop_words)
         self._stem = stem
 
     def _tokenize(self, text):
