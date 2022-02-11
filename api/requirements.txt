@@ -15,6 +15,7 @@ MarkupSafe==2.0.1
 marshmallow==3.14.1
 nltk==3.7
 pyparsing==3.0.7
+PyStemmer==2.0.1
 pytz==2021.3
 regex==2022.1.18
 requests==2.27.1
