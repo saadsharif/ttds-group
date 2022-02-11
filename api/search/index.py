@@ -61,10 +61,6 @@ class Index:
                 print(f"Flushing last segment...", end="")
                 most_recent.flush()
                 print("OK")
-            print(f"Closing all segments...", end="")
-            for segment in self._segments:
-                segment.close()
-            print("OK")
         self._write_lock.release_write()
 
     def load(self):
@@ -78,6 +74,10 @@ class Index:
     # closes the index
     def close(self):
         self.save()
+        print(f"Closing all segments...", end="")
+        for segment in self._segments:
+            segment.close()
+        print("OK")
         self._doc_store.close()
 
     # dumps to readable format
