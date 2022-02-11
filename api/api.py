@@ -78,12 +78,16 @@ def bulk_index():
         body = request.data.decode()
         failures = []
         documents = []
+        i = 1
         for line in body.splitlines():
             try:
                 doc = DocumentSchema().load(json.loads(line))
+                i += 1
                 documents.append(doc)
             except JSONDecodeError:
-                failures.append(f"Cannot decode document - {line}")
+                failures.append(f"Cannot decode document at line - {i}")
+            except ValidationError as e:
+                failures.append(f"Cannot parse document at line {i}")
         doc_ids, fails = index.add_documents(documents)
         failures += fails
         return jsonify({
@@ -95,8 +99,6 @@ def bulk_index():
         }), 200
     except IndexException as ie:
         return jsonify(APIErrorSchema().dump(APIError('unable to index index documents', {'index': ie.message}))), 400
-    except ValidationError as e:
-        return jsonify(APIErrorSchema().dump(APIError('unable to parse index request', e.messages))), 400
 
 
 # this saves the current index segment in memory to disk - it causes internal indexing and querying to be locked.
