@@ -76,8 +76,8 @@ class Segment:
     def flush(self):
         # whilst we're flushing, reads can continue on the buffer. Indexing can't.
         self._indexing_lock.acquire_write()
-        for key, values in self._buffer.items():
-            self._index[key] = values
+        for term, term_posting in self._buffer.items():
+            self._index[term] = term_posting
         # this flush is just to prevent queries from reading an empty buffer - might not be needed. Note we do this
         # only for the period of clearing the buffer - not during flushing - very short period
         self._flush_lock.acquire_write()

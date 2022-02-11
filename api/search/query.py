@@ -12,7 +12,7 @@ from pyparsing import (
     oneOf,
 )
 
-from search.posting import ScoredPosting
+from search.posting import ScoredPosting, Posting
 
 
 class Query:
@@ -110,6 +110,7 @@ class Query:
 
     def _evaluate_natural(self, components, condition, score=True):
         # force scoring for natural queries - possibly not optimal for a b AND c.
+        # TODO: this will be vector scoring
         return self._evaluate_or(components, condition, score=True)
 
     def evaluate(self, components, condition=lambda left, right, args={}: True, score=False):

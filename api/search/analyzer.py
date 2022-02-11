@@ -1,12 +1,13 @@
 import re
 
-from stemming.porter2 import stem as porter_stem
+import nltk
 
 
 class Analyzer:
     def __init__(self, stop_words=[], stem=True):
         self._stop_words = set(stop_words)
         self._stem = stem
+        self._stemmer = nltk.stem.PorterStemmer()
 
     def _tokenize(self, text):
         return re.split("\W+", text)
@@ -24,7 +25,7 @@ class Analyzer:
         token = case_folder(token)
         if filter_stop(token):
             if self._stem:
-                return porter_stem(token)
+                return self._stemmer.stem(token)
             return token
         return None
 

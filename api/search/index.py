@@ -34,7 +34,6 @@ class Index:
         self._doc_store = DocumentStore.open(os.path.join(self._storage_path, 'docs.db'), 'c')
         # used to ensure single threaded indexing
         self._write_lock = ReadWriteLock()
-        pass
 
     def _get_db_path(self):
         return os.path.join(self._storage_path, 'index.idb')
@@ -179,6 +178,7 @@ class Index:
         # this should be improved e.g. using a bloom filter or some bit set, inside the segment though -i.e.
         # it should return [] quickly
         term_posting = TermPosting()
-        for segment in self._segments:
-            term_posting.add_term_info(segment.get_term(term))
+        if term:
+            for segment in self._segments:
+                term_posting.add_term_info(segment.get_term(term))
         return term_posting
