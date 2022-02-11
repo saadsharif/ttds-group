@@ -1,12 +1,12 @@
 import os
 import pickle
-import time
 import uuid
 from bidict import bidict
 from search.analyzer import Analyzer
 from search.exception import IndexException
 from search.lock import ReadWriteLock
 from search.models import Result
+from search.posting import TermPosting
 from search.query import Query
 from search.segment import Segment, _create_segment_id
 from search.store import DocumentStore
@@ -39,19 +39,32 @@ class Index:
     def _get_db_path(self):
         return os.path.join(self._storage_path, 'index.idb')
 
-    # "
     # saves the index to disk - for now just pickle down given the sizes
     def save(self):
         # we need to lock as we shouldn't index during flushing or vise versa
         self._write_lock.acquire_write()
+        print(f"Syncing document store...", end="")
         self._doc_store.sync()
+        print("OK")
         with open(self._get_db_path(), 'wb') as index_file:
+            print(f"Saving state file to {self._get_db_path()}...", end="")
             state = self.__dict__.copy()
             # we don't store the doc store
             del state['_doc_store']
             del state['_write_lock']
             pickle.dump(state, index_file)
-        self.__get_current_segment().flush()
+            print("OK")
+        if len(self._segments) > 0:
+            # flush the last segment if we need to
+            most_recent = self._segments[0]
+            if not most_recent.is_flushed():
+                print(f"Flushing last segment...", end="")
+                most_recent.flush()
+                print("OK")
+            print(f"Closing all segments...", end="")
+            for segment in self._segments:
+                segment.close()
+            print("OK")
         self._write_lock.release_write()
 
     def load(self):
@@ -91,13 +104,13 @@ class Index:
         return self.current_id - 1
 
     # IMPORTANT: This is not thread safe! it is for use in this class only within methods which lock
-    def __get_current_segment(self):
+    def __get_writeable_segment(self):
         if len(self._segments) == 0:
             # starting case - create one with new id
             self._segments = [Segment(_create_segment_id(), self._storage_path)]
             return self._segments[0]
         most_recent = self._segments[0]
-        if not most_recent.is_open():
+        if most_recent.is_flushed():
             # segment has been flushed, create a new one
             self._segments.index(0, Segment(_create_segment_id(),self._storage_path))
             return self._segments[0]
@@ -106,7 +119,7 @@ class Index:
             most_recent.flush()
             # insert new
             self._segments.index(0, Segment(_create_segment_id(), self._storage_path))
-        return self._segments[0]
+        return most_recent
 
     # this is an append only operation. We generated a new internal id for the document and store a mapping between the
     # the two. The passed id here must be unique - no updates supported, but can be anything.
@@ -119,13 +132,42 @@ class Index:
         self._id_mappings[self._current_doc_id] = document.id
         # TODO: no separate indices per field currently - we might want to add this
         terms = self.analyzer.process_document(document)
-        self.__get_current_segment().add_document(self._current_doc_id, terms)
+        # TODO: Handle failures here!
+        self.__get_writeable_segment().add_document(self._current_doc_id, terms)
         # persist to the bd
         self._doc_store[str(self._current_doc_id)] = document.fields
         doc_id = self._current_doc_id
         self._current_doc_id += 1
         self._write_lock.release_write()
-        return doc_id
+        return document.id, doc_id
+
+    # this is more efficient than single document addition
+    def add_documents(self, documents):
+        # enforce single threaded indexing
+        failures = []
+        self._write_lock.acquire_write()
+        # check all the ids
+        docs_to_index = []
+        for document in documents:
+            if document.id in self._id_mappings.inverse:
+                failures.append(f'{document.id} already exists in index {self._index_id}')
+            else:
+                docs_to_index.append(document)
+        # this could be more efficient - i.e. we could optimise bulk additions - less locking and large write chunks
+        doc_ids = []
+        doc_batch = {}
+        # TODO: Handle failures here!
+        for document in docs_to_index:
+            self._id_mappings[self._current_doc_id] = document.id
+            terms = self.analyzer.process_document(document)
+            self.__get_writeable_segment().add_document(self._current_doc_id, terms)
+            doc_ids.append((document.id, self._current_doc_id))
+            doc_batch[str(self._current_doc_id)] = document.fields
+            self._current_doc_id += 1
+        self._doc_store.update(doc_batch)
+        # persists the batch to the db
+        self._write_lock.release_write()
+        return doc_ids, failures
 
     def search(self, query):
         docs, total = Query(self).execute(query.query, query.score, query.max_results)
@@ -136,7 +178,7 @@ class Index:
         # get all the matching docs in all the segments - currently we assume the term is in every segment
         # this should be improved e.g. using a bloom filter or some bit set, inside the segment though -i.e.
         # it should return [] quickly
-        matches = []
+        term_posting = TermPosting()
         for segment in self._segments:
-            matches += segment.get_term(term)
-        return matches
+            term_posting.add_term_info(segment.get_term(term))
+        return term_posting

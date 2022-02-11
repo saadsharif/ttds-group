@@ -51,11 +51,12 @@ class Posting:
     @staticmethod
     def from_store_format(data):
         posting = Posting(data["id"])
-        posting.positions = data["pod"]
+        posting.positions = data["pos"]
         return posting
 
 
-class TermPostings:
+# encapsulates all the information about a term
+class TermPosting:
 
     def __init__(self, collecting_frequency=0):
         self._collection_frequency = collecting_frequency
@@ -82,6 +83,12 @@ class TermPostings:
             return self.postings[0]
         return Posting(-1)
 
+    # used to collate term information across many term postings
+    def add_term_info(self, term_posting):
+        self._collection_frequency += term_posting.collection_frequency
+        self.postings += term_posting.postings
+        pass
+
     def __iter__(self):
         return iter(self.postings)
 
@@ -96,6 +103,6 @@ class TermPostings:
     @staticmethod
     def from_store_format(data):
         value = json.loads(data)
-        termPosting = TermPostings(value["cf"])
+        termPosting = TermPosting(value["cf"])
         termPosting.postings = [Posting.from_store_format(posting) for posting in value["p"]]
         return termPosting

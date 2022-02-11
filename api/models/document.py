@@ -9,7 +9,7 @@ class DocumentSchema(Schema):
     authors = fields.Str()
     abstract = fields.Str()
     subject = fields.Str()
-    text = fields.Str()
+    body = fields.Str()
 
     @post_load
     def make_document(self, data, **kwargs):
@@ -18,5 +18,5 @@ class DocumentSchema(Schema):
             'authors': data['authors'],
             'abstract': data['abstract'],
             'subject': data['subject'],
-            'text': data['text']
+            'body': data['body']
         })

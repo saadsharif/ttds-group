@@ -6,7 +6,7 @@ import logging
 
 from lmdbm import Lmdb
 
-from search.posting import TermPostings
+from search.posting import TermPosting
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class DocumentStore(Lmdb):
 def parse_line(line):
     (left, sep, right) = line.partition(b'\t')
     term = json.loads(left.decode('utf8'))
-    posting = TermPostings.from_store_format(right.decode('utf8'))
+    posting = TermPosting.from_store_format(right.decode('utf8'))
     return term, posting
 
 
@@ -41,8 +41,7 @@ def parse_term(line):
 
 def parse_posting(line):
     (left, sep, right) = line.partition(b'\t')
-    value = json.loads(right.decode('utf8'))
-    return value
+    return TermPosting.from_store_format(right.decode('utf8'))
 
 
 # this is not thread - we assume locking at higher levels
@@ -117,8 +116,7 @@ class SegmentStore(dict):
         offset = self._offsets[key]
         self._file.seek(offset)
         line = self._file.readline()
-        value = parse_posting(line)
-        return value
+        return parse_posting(line)
 
     def __setitem__(self, key, term_posting):
         if key in self._offsets:
@@ -198,7 +196,7 @@ class SegmentStore(dict):
     def items(self):
         offset = 0
         while True:
-            # if somethig was read/written while iterating, the stream might be positioned elsewhere
+            # if something was read/written while iterating, the stream might be positioned elsewhere
             if self._file.tell() != offset:
                 self._file.seek(offset)  # put it back on track
 

@@ -1,5 +1,7 @@
 import atexit
+import json
 import os
+from json import JSONDecodeError
 
 from flask import Flask, jsonify, request
 from marshmallow import ValidationError
@@ -59,23 +61,46 @@ def index_doc():
     try:
         document = DocumentSchema().load(request.get_json())
         # no per field search currently
-        doc_id = index.add_document(document)
+        doc_id, iid = index.add_document(document)
         return jsonify({
-            'document_id': document.id,
-            'internal_id': doc_id
-        }), 200
+            'doc_id': doc_id,
+            'internal_id': iid
+        }), 201
     except ValidationError as e:
         return jsonify(APIErrorSchema().dump(APIError('unable to parse index request', e.messages))), 400
     except IndexException as ie:
         return jsonify(APIErrorSchema().dump(APIError('unable to index index document', {'index': ie.message}))), 400
-    return jsonify(ResultsSchema().dump(results)), 200
 
 
-# TODO: we need a bulk end point where we can send batches of N documents (as ndjson)
+@app.route('/bulk_index', methods=['POST'])
+def bulk_index():
+    try:
+        body = request.data.decode()
+        failures = []
+        documents = []
+        for line in body.splitlines():
+            try:
+                doc = DocumentSchema().load(json.loads(line))
+                documents.append(doc)
+            except JSONDecodeError:
+                failures.append(f"Cannot decode document - {line}")
+        doc_ids, fails = index.add_documents(documents)
+        failures += fails
+        return jsonify({
+            'docs': [{
+                'doc_id': doc_id[0],
+                'internal_id': doc_id[1]
+            } for doc_id in doc_ids],
+            'failures': failures,
+        }), 200
+    except IndexException as ie:
+        return jsonify(APIErrorSchema().dump(APIError('unable to index index documents', {'index': ie.message}))), 400
+    except ValidationError as e:
+        return jsonify(APIErrorSchema().dump(APIError('unable to parse index request', e.messages))), 400
 
-# this saves the current index in memory to disk - currently a blocking call
-# TODO: we should only allow one of these to occur at once and we need to make it incremental -
-#  it should probably create a new file
+
+# this saves the current index segment in memory to disk - it causes internal indexing and querying to be locked.
+# Don't Call unless you really need! Segments are automatically saved to disk anyway
 @app.route('/flush', methods=['POST', 'GET'])
 def flush():
     index.save()
