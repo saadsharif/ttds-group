@@ -112,14 +112,14 @@ class Index:
         most_recent = self._segments[0]
         if most_recent.is_flushed():
             # segment has been flushed, create a new one
-            self._segments.index(0, Segment(_create_segment_id(),self._storage_path))
+            self._segments.insert(0, Segment(_create_segment_id(),self._storage_path))
             return self._segments[0]
         if not most_recent.has_capacity():
             # segment is open but has no capacity so flush
             most_recent.flush()
             # insert new
-            self._segments.index(0, Segment(_create_segment_id(), self._storage_path))
-        return most_recent
+            self._segments.insert(0, Segment(_create_segment_id(), self._storage_path))
+        return self._segments[0]
 
     # this is an append only operation. We generated a new internal id for the document and store a mapping between the
     # the two. The passed id here must be unique - no updates supported, but can be anything.
