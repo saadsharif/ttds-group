@@ -1,5 +1,6 @@
 import ujson as json
 
+
 class ScoredPosting:
     def __init__(self, posting, score=0):
         self._posting = posting
@@ -16,11 +17,20 @@ class ScoredPosting:
     def __iter__(self):
         return iter(self._posting)
 
+    @property
+    def is_stop_word(self):
+        return False
+
 
 class Posting:
-    def __init__(self, doc_id):
+    def __init__(self, doc_id, stop_word=False):
         self.positions = []
         self._doc_id = doc_id
+        self._stop_word = stop_word
+
+    @property
+    def is_stop_word(self):
+        return self._stop_word
 
     @property
     def doc_id(self):
