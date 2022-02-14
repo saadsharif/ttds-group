@@ -7,10 +7,11 @@ class Analyzer:
     def __init__(self, stop_words=[], stem=True):
         self._stop_words = set(stop_words)
         self._stem = stem
-        self._stemmer = Stemmer.Stemmer('english')
+        self._stemmer = Stemmer.Stemmer('porter')
+        self._tokenizer = re.compile(r'\W+')
 
     def _tokenize(self, text):
-        return re.split("\W+", text)
+        return self._tokenizer.findall(text)
 
     def process_token(self, token):
 
@@ -35,7 +36,8 @@ class Analyzer:
 
     def __setstate__(self, state):
         self._stem, self._stop_words = state
-        self._stemmer = Stemmer.Stemmer('english')
+        self._stemmer = Stemmer.Stemmer('porter')
+        self._tokenizer = re.compile(r'\W+')
 
     def _process_tokens(self, tokens):
         terms = []
