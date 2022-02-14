@@ -1,8 +1,8 @@
 import atexit
-import json
+import ujson as json
 import os
 from json import JSONDecodeError
-
+from flask.json import JSONEncoder
 from flask import Flask, jsonify, request
 from marshmallow import ValidationError
 
@@ -116,6 +116,14 @@ def on_exit_api():
 
 
 atexit.register(on_exit_api)
+
+
+class CustomJSONEncoder(JSONEncoder):
+    def default(self, obj):
+        try:
+            return json.dumps(obj)
+        except TypeError:
+            return JSONEncoder.default(self, obj)
 
 if __name__ == '__main__':
     app.run()
