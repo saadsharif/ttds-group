@@ -66,8 +66,10 @@ class Index:
         self._write_lock.acquire_write()
         if os.path.isfile(self._get_db_path()):
             with open(self._get_db_path(), 'rb') as index_file:
+                print("Loading index...")
                 index = pickle.load(index_file)
                 self.__dict__.update(index)
+                print("Index Loaded")
         self._write_lock.release_write()
 
     # closes the index

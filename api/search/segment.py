@@ -95,6 +95,7 @@ class Segment:
     def __setstate__(self, state):
         """Restore state from the unpickled state values."""
         self._segment_id, self._posting_file, self._number_of_documents, self._is_flushed, self._max_docs = state
+        print(f"Loading segment {self._segment_id} from {self._posting_file}...", end="")
         self._buffer = {}
         # if we're unpickling we're loading - unknown state potentially, close the segment
         self._is_flushed = True
@@ -102,6 +103,7 @@ class Segment:
         self._indexing_lock = ReadWriteLock()
         # this will load the index off disk
         self._index = SegmentStore(self._posting_file)
+        print("OK")
 
     def __iter__(self):
         return self.keys()

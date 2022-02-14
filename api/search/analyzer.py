@@ -1,13 +1,13 @@
 import re
 
-import nltk
+import Stemmer
 
 
 class Analyzer:
     def __init__(self, stop_words=[], stem=True):
         self._stop_words = set(stop_words)
         self._stem = stem
-        self._stemmer = nltk.stem.PorterStemmer()
+        self._stemmer = Stemmer.Stemmer('english')
 
     def _tokenize(self, text):
         return re.split("\W+", text)
@@ -25,9 +25,17 @@ class Analyzer:
         token = case_folder(token)
         if filter_stop(token):
             if self._stem:
-                return self._stemmer.stem(token)
+                return self._stemmer.stemWord(token)
             return token
         return None
+
+    def __getstate__(self):
+        """Return state values to be pickled. Just a state file."""
+        return self._stem, self._stop_words
+
+    def __setstate__(self, state):
+        self._stem, self._stop_words = state
+        self._stemmer = Stemmer.Stemmer('english')
 
     def _process_tokens(self, tokens):
         terms = []

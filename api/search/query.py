@@ -90,6 +90,8 @@ class Query:
         try:
             left_posting = next(left_side)
             right_posting = next(right_side)
+            if left_posting.is_stop_word or right_posting.is_stop_word:
+                return self._evaluate_or(components, condition, score=score)
             while True:
                 if left_posting.doc_id > right_posting.doc_id:
                     right_posting = next(right_side)
@@ -126,9 +128,13 @@ class Query:
         union = []
         left_side_postings = iter(self.evaluate(components[0], score=score))
         right_side_postings = iter(self.evaluate(components[1], score=score))
-        # these will be
         left_posting = next(left_side_postings, None)
         right_posting = next(right_side_postings, None)
+        if left_posting.is_stop_word:
+            left_posting = None
+        if right_posting.is_stop_word:
+            right_posting = None
+
         while left_posting and right_posting:
             if left_posting.doc_id < right_posting.doc_id:
                 union.append(left_posting)
@@ -158,6 +164,8 @@ class Query:
         not_docs = []
         right_side = iter(self.evaluate(components[0], score=score))
         right = next(right_side, None)
+        if right.is_stop_word:
+            right = None
         doc_id = 1
         while doc_id < self._index.current_id:
             if not right or doc_id < right.doc_id:
@@ -223,12 +231,16 @@ class Query:
         return self.evaluate(and_query[0], condition=check_proximity, score=score)
 
     def _evaluate_term(self, components, condition, score):
+        # score the docs
+        scored_postings = []
         term = self._index.analyzer.process_token(components[0])
+        if term is None:
+            # we have a stop word - a special case - we use a doc id of 0 (this should never exist)
+            return [Posting(0, stop_word=True)]
         term_postings = self._index.get_term(term)
         if not score:
             return term_postings
-        # score the docs
-        scored_postings = []
+
         for doc_posting in term_postings:
             score = (1 + math.log10(doc_posting.frequency)) * \
                     math.log10(self._index.number_of_docs / term_postings.doc_frequency)
@@ -238,6 +250,7 @@ class Query:
     def execute(self, query, score, max_results):
         parsed = self._parser(query)
         docs = self.evaluate(parsed[0], score=score)
+        # we would add pagination here
         if score:
             return heapq.nlargest(max_results, docs, key=lambda doc: doc.score), len(docs)
         return heapq.nsmallest(max_results, docs, key=lambda doc: doc.doc_id), len(docs)
