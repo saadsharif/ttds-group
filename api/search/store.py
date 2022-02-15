@@ -6,6 +6,7 @@ import logging
 
 from lmdbm import Lmdb
 
+from search.exception import StoreException
 from search.posting import TermPosting
 
 logger = logging.getLogger(__name__)
@@ -126,37 +127,14 @@ class SegmentStore(dict):
 
     def __setitem__(self, key, term_posting):
         if key in self._offsets:
-            # to be removed once the new value has been written
-            old_offset = self._offsets[key]
-        else:
-            old_offset = None
+           raise StoreException("Segment store is append only")
 
         # we have a term posting we need to store,
-
         line = json.dumps(key, ensure_ascii=False) + '\t' + term_posting.to_store_format() + '\n'
         line = line.encode('UTF-8')
-        size = len(line)
-
-        found = self._findLine(size)
-
-        if found:
-            # great, we can recycle a commented line
-            (place, offset) = found
-            self._file.seek(offset)
-            diff = place - size
-            # if diff is 0, we'll override the line perfectly:        XXXX\n -> YYYY\n
-            # if diff is 1, we'll leave an empty line after:          XXXX\n -> YYY\n\n
-            # if diff is > 1, we'll need to comment out the rest:     XXXX\n -> Y\n#X\n (diff == 3)
-            if diff > 1:
-                line += b'#'
-                if diff > 5:
-                    # it's worth to reuse that space
-                    bisect.insort(self._free_lines, (diff, offset + size))
-
-        else:
-            # go to end of file
-            self._file.seek(0, os.SEEK_END)
-            offset = self._file.tell()
+        # we seek to the end immediately - no updates, not deletes
+        self._file.seek(0, os.SEEK_END)
+        offset = self._file.tell()
 
         # if it's a really big line, it won't be written at once on the disk
         # so until it's done, let's consider it a comment
@@ -171,11 +149,6 @@ class SegmentStore(dict):
         self._file.seek(offset)
         self._file.write(line[0:1])
         self._file.flush()
-
-        # and now remove the previous entry
-        if old_offset:
-            self._freeLine(old_offset)
-
         self._offsets[key] = offset
 
     def __delitem__(self, key):
