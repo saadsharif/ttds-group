@@ -3,6 +3,7 @@ import pickle
 import uuid
 from bidict import bidict
 from search.analyzer import Analyzer
+from search.bert import BERTModule
 from search.exception import IndexException
 from search.lock import ReadWriteLock
 from search.models import Result
@@ -34,6 +35,8 @@ class Index:
         self._doc_store = DocumentStore.open(os.path.join(self._storage_path, 'docs.db'), 'c')
         # used to ensure single threaded indexing
         self._write_lock = ReadWriteLock()
+        # bert model for vectors
+        self._vector_model = BERTModule()
 
     def _get_db_path(self):
         return os.path.join(self._storage_path, 'index.idb')
@@ -51,6 +54,7 @@ class Index:
             # we don't store the doc store
             del state['_doc_store']
             del state['_write_lock']
+            del state['_vector_model']
             pickle.dump(state, index_file)
             print("OK")
         if len(self._segments) > 0:
@@ -165,8 +169,8 @@ class Index:
             doc_ids.append((document.id, self._current_doc_id))
             doc_batch[str(self._current_doc_id)] = document.fields
             self._current_doc_id += 1
-        self._doc_store.update(doc_batch)
         # persists the batch to the db
+        self._doc_store.update(doc_batch)
         self._write_lock.release_write()
         return doc_ids, failures
 
@@ -186,3 +190,6 @@ class Index:
                 if termPosting:
                     term_posting.add_term_info(termPosting)
         return term_posting
+
+    def get_vector(self, query):
+        return self._vector_model.embedding(query)

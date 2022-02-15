@@ -53,3 +53,4 @@ class Analyzer:
 
     def process_document(self, doc):
         return self.process(str(doc))
+
