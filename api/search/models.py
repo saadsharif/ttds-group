@@ -1,3 +1,4 @@
+from nltk import tokenize
 
 class Result:
     def __init__(self, id, score, fields={}):
@@ -13,6 +14,11 @@ class Document:
 
     def __str__(self):
         return " ".join(list(self.fields.values()))
+
+    def __iter__(self):
+        sentences = tokenize.sent_tokenize(str(self))
+        for sentence in sentences:
+            yield sentence
 
 
 class Search:

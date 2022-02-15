@@ -1,5 +1,7 @@
 import heapq
 import math
+import time
+
 from pyparsing import (
     Word,
     alphanums,
@@ -90,7 +92,7 @@ class Query:
         try:
             left_posting = next(left_side)
             right_posting = next(right_side)
-            if left_posting.is_stop_word or right_posting.is_stop_word:
+            if (left_posting and left_posting.is_stop_word) or (right_posting and right_posting.is_stop_word):
                 return self._evaluate_or(components, condition, score=score)
             while True:
                 if left_posting.doc_id > right_posting.doc_id:
@@ -111,8 +113,10 @@ class Query:
         return intersection
 
     def _evaluate_natural(self, components, condition, score=True):
-        # force scoring for natural queries - possibly not optimal for a b AND c.
-        # TODO: this will be vector scoring
+        start = time.time()
+        query_vector = self._index.get_vector(" ".join([" ".join(component) for component in components]))
+        print(f"{time.time() - start}s for vector query generation")
+        # TODO: Replace this with HNSW vector scoring
         return self._evaluate_or(components, condition, score=True)
 
     def evaluate(self, components, condition=lambda left, right, args={}: True, score=False):
@@ -130,9 +134,9 @@ class Query:
         right_side_postings = iter(self.evaluate(components[1], score=score))
         left_posting = next(left_side_postings, None)
         right_posting = next(right_side_postings, None)
-        if left_posting.is_stop_word:
+        if left_posting and left_posting.is_stop_word:
             left_posting = None
-        if right_posting.is_stop_word:
+        if right_posting and right_posting.is_stop_word:
             right_posting = None
 
         while left_posting and right_posting:
