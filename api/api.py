@@ -125,5 +125,6 @@ class CustomJSONEncoder(JSONEncoder):
         except TypeError:
             return JSONEncoder.default(self, obj)
 
+
 if __name__ == '__main__':
     app.run()
