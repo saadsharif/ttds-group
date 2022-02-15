@@ -182,5 +182,7 @@ class Index:
         term_posting = TermPosting()
         if term:
             for segment in self._segments:
-                term_posting.add_term_info(segment.get_term(term))
+                termPosting = segment.get_term(term)
+                if termPosting:
+                    term_posting.add_term_info(termPosting)
         return term_posting

@@ -117,6 +117,12 @@ class SegmentStore(dict):
         self._file.seek(offset)
         line = self._file.readline()
         return parse_posting(line)
+    """
+        # TODO: we should allow a reader to opened on this and reused for each query thread
+            with open(self.path, 'r+b') as reader:
+                reader.seek(offset)
+                line = reader.readline()
+            return parse_posting(line)"""
 
     def __setitem__(self, key, term_posting):
         if key in self._offsets:

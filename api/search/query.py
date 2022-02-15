@@ -250,6 +250,9 @@ class Query:
     def execute(self, query, score, max_results):
         parsed = self._parser(query)
         docs = self.evaluate(parsed[0], score=score)
+        if len(docs) == 1 and docs[0].doc_id == 0:
+            # a doc based on a stop word search
+            return [], 0
         # we would add pagination here
         if score:
             return heapq.nlargest(max_results, docs, key=lambda doc: doc.score), len(docs)
