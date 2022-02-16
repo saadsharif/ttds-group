@@ -4,9 +4,12 @@ import json
 import sys
 import jsonlines
 import re
-# load from file-like objects
 
 
+# run using python3 clean.py filename.ndjson
+
+# creaded a ndjson cleaned up version
+# removes newlines, words of length 1 and 2, puntuation
 
 def clean(arg):
 
@@ -21,15 +24,15 @@ def clean(arg):
         add_to_clean = ""
         for token in split:  
     
-            string_encode = token.encode("ascii", "ignore").decode()
+            string_encode = token.encode("ascii", "ignore").decode()           # this removes the unicodes like \uxxxx
             token = string_encode
-            if("http" in token or "@" in token):
+            if("http" in token or "@" in token):                               #keep the url and emails
                 token = token.replace("mailto:","")
                 add_to_clean = add_to_clean + " " + token
                 
                 
             else:
-                token = token.translate(str.maketrans('', '', "!|\"£$%^&*()_+=}{[]~:;><.,/\'"))
+                token = token.translate(str.maketrans('', '', "!|\"£$%^&*()_+=}{[]~:;><.,/\'"))               #this removes the punctuations
                 token = token.replace(" " ,"")
                 token = re.sub(r'[0-9]+', '', token)
                 if (len(token) <= 2 and ("figure." not in token)):
@@ -41,7 +44,7 @@ def clean(arg):
 
     arg = arg.replace(".ndjson","")
     with open(arg+ "_clean.ndjson","w") as file:
-        ndjson.dump(clean_paper,file)
+        ndjson.dump(clean_paper,file)                       #create the new ndjson file and write to it 
 
 
 if __name__ == "__main__":
