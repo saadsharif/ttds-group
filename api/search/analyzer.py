@@ -11,7 +11,7 @@ class Analyzer:
         self._tokenizer = re.compile(r'\W+')
 
     def _tokenize(self, text):
-        return self._tokenizer.findall(text)
+        return self._tokenizer.split(text)
 
     def process_token(self, token):
 

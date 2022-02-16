@@ -2,14 +2,11 @@ import ujson as json
 import io
 import os.path
 import bisect
-import logging
 
 from lmdbm import Lmdb
 
 from search.exception import StoreException
 from search.posting import TermPosting
-
-logger = logging.getLogger(__name__)
 
 
 # this represents the document store. Currently, we use lighting db so documents do not need to be held in
@@ -87,8 +84,7 @@ class SegmentStore(dict):
             offset += len(line)
 
         self._free_lines.sort()
-        logger.info(f"Created pysos dict '{self.path}' with {len(self)} items")
-        logger.debug("free lines: " + str(len(self._free_lines)))
+        print(f"Created segment store '{self.path}' with {len(self)} items")
 
     def _freeLine(self, offset):
         self._file.seek(offset)
@@ -118,6 +114,7 @@ class SegmentStore(dict):
         self._file.seek(offset)
         line = self._file.readline()
         return parse_posting(line)
+
     """
         # TODO: we should allow a reader to opened on this and reused for each query thread
             with open(self.path, 'r+b') as reader:
@@ -127,7 +124,7 @@ class SegmentStore(dict):
 
     def __setitem__(self, key, term_posting):
         if key in self._offsets:
-           raise StoreException("Segment store is append only")
+            raise StoreException("Segment store is append only")
 
         # we have a term posting we need to store,
         line = json.dumps(key, ensure_ascii=False) + '\t' + term_posting.to_store_format() + '\n'
@@ -160,7 +157,6 @@ class SegmentStore(dict):
         return (key in self._offsets)
 
     def setdefault(self, key, val):
-        # See https://github.com/dagnelies/pysos/issues/3
         raise UserWarning('Operation not available')
 
     def keys(self):
@@ -204,8 +200,7 @@ class SegmentStore(dict):
 
     def close(self):
         self._file.close()
-        logger.info(f"Closed pysos dict '{self.path}' with {len(self)} items'")
-        logger.debug("free lines: " + str(len(self._free_lines)))
+        print(f"Closed segment store '{self.path}' with {len(self)} items'")
 
 
 class List(list):

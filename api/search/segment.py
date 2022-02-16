@@ -16,7 +16,7 @@ def _create_segment_id():
 
 class Segment:
 
-    def __init__(self, segment_id, storage_path, max_docs=DEFAULT_MAX_DOCS_PER_SEGMENT):
+    def __init__(self, segment_id, storage_path, facet_fields, max_docs=DEFAULT_MAX_DOCS_PER_SEGMENT):
         # for now we use a hash for the term dictionary - in future we may want to use a tree here
         # this index persists the postings on disk to save disk - note that segments are immutable
         # the keys to this dict are the terms, the values offsets
@@ -27,6 +27,14 @@ class Segment:
         self._number_of_documents = 0
         self._is_flushed = False
         self._max_docs = max_docs
+        # stores the doc_id range in this segment - useful for facet checks
+        self._max_doc_id = 0
+        self._facet_fields = {}
+        self._facets = {}
+        for field in facet_fields:
+            facet_store_path = os.path.join(storage_path, f"{self._segment_id}-{field}.dts")
+            self._facets[field] = SegmentStore(facet_store_path)
+            self._facet_fields[field] = facet_store_path
         self._flush_lock = ReadWriteLock()
         self._indexing_lock = ReadWriteLock()
 
@@ -52,6 +60,8 @@ class Segment:
             self._buffer[term].add_position(doc_id, p)
             p += 1
         self._number_of_documents += 1
+        if doc_id > self._max_doc_id:
+            self._max_doc_id = doc_id
         self._indexing_lock.release_write()
 
     def get_term(self, term):
@@ -90,20 +100,27 @@ class Segment:
     def __getstate__(self):
         """Return state values to be pickled. Just a state file."""
         # note we ignore the heavy stuff here e.g. the buffer and index
-        return self._segment_id, self._posting_file, self._number_of_documents, self._is_flushed, self._max_docs
+        return self._segment_id, self._posting_file, self._number_of_documents, self._is_flushed, self._max_docs, self._max_doc_id, self._facet_fields
 
     def __setstate__(self, state):
         """Restore state from the unpickled state values."""
-        self._segment_id, self._posting_file, self._number_of_documents, self._is_flushed, self._max_docs = state
-        print(f"Loading segment {self._segment_id} from {self._posting_file}...", end="")
+        self._segment_id, self._posting_file, self._number_of_documents, self._is_flushed, self._max_docs, self._max_doc_id, self._facet_fields = state
+        print(f"Loading segment {self._segment_id}")
         self._buffer = {}
         # if we're unpickling we're loading - unknown state potentially, close the segment
         self._is_flushed = True
         self._flush_lock = ReadWriteLock()
         self._indexing_lock = ReadWriteLock()
         # this will load the index off disk
+        print(f"Loading index segment {self._segment_id} from {self._posting_file}...")
         self._index = SegmentStore(self._posting_file)
-        print("OK")
+        print(f"Index loaded for {self._segment_id}")
+        # load the facets
+        for field, path in self._facet_fields.items():
+            print(f"Loading field {field} in segment {self._segment_id}...")
+            self._facets[field] = SegmentStore(path)
+            print(f"Field {field} loaded for segment {self._segment_id}")
+        print(f"Segment {self._segment_id} loaded")
 
     def __iter__(self):
         return self.keys()
