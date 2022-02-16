@@ -15,7 +15,7 @@ from search.store import DocumentStore
 
 class Index:
 
-    def __init__(self, storage_path, analyzer=Analyzer(), index_id=uuid.uuid4()):
+    def __init__(self, storage_path, analyzer=Analyzer(), facet_fields=[], index_id=uuid.uuid4()):
         # location of index files
         self._storage_path = storage_path
         self.analyzer = analyzer
@@ -37,6 +37,8 @@ class Index:
         self._write_lock = ReadWriteLock()
         # bert model for vectors
         self._vector_model = BERTModule()
+        # facet fields
+        self._facet_fields = facet_fields
 
     def _get_db_path(self):
         return os.path.join(self._storage_path, 'index.idb')
@@ -112,18 +114,18 @@ class Index:
     def __get_writeable_segment(self):
         if len(self._segments) == 0:
             # starting case - create one with new id
-            self._segments = [Segment(_create_segment_id(), self._storage_path)]
+            self._segments = [Segment(_create_segment_id(), self._storage_path, self._facet_fields)]
             return self._segments[0]
         most_recent = self._segments[0]
         if most_recent.is_flushed():
             # segment has been flushed, create a new one
-            self._segments.insert(0, Segment(_create_segment_id(),self._storage_path))
+            self._segments.insert(0, Segment(_create_segment_id(), self._storage_path, self._facet_fields))
             return self._segments[0]
         if not most_recent.has_capacity():
             # segment is open but has no capacity so flush
             most_recent.flush()
             # insert new
-            self._segments.insert(0, Segment(_create_segment_id(), self._storage_path))
+            self._segments.insert(0, Segment(_create_segment_id(), self._storage_path, self._facet_fields))
         return self._segments[0]
 
     # this is an append only operation. We generated a new internal id for the document and store a mapping between the
