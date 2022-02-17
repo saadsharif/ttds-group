@@ -1,6 +1,6 @@
 **__pycache__
 .venv
 .idea
-index**
+index/**
 TODO.md
 output.log
