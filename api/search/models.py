@@ -1,5 +1,6 @@
 from nltk import tokenize
 
+
 class Result:
     def __init__(self, id, score, fields={}):
         self.id = id
@@ -22,8 +23,9 @@ class Document:
 
 
 class Search:
-    def __init__(self, query, score, max_results, filters={}):
+    def __init__(self, query, score, max_results, fields=[], filters={}):
         self.query = query
         self.score = score
         self.filters = filters
+        self.fields = fields
         self.max_results = max_results
