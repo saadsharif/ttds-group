@@ -182,7 +182,7 @@ class Store(dict):
             yield parse_line(line)
 
     def __iter__(self):
-        return self.keys()
+        return iter(self.items())
 
     def values(self):
         for item in self.items():
