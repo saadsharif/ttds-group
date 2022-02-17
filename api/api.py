@@ -109,6 +109,16 @@ def flush():
     return jsonify({'ok': True}), 200
 
 
+# selects two segments (smallest and flushed) and merges them together
+@app.route('/optimize', methods=['POST', 'GET'])
+def optimize():
+    before, after = index.optimize()
+    return jsonify({'ok': True, "segments": {
+        "before": before,
+        "after": after
+    }}), 200
+
+
 def on_exit_api():
     global index
     print('Closing search index')

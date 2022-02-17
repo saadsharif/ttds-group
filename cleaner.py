@@ -11,7 +11,7 @@ def clean(arg):
     with open(arg, "r") as f, open(arg.replace(".ndjson", "") + "_clean.ndjson", "w") as clean_file:
         for line in f:
             data = json.loads(line)
-            if "body" in data:
+            if "body" in data and data["body"]:
                 split = data["body"].split()
                 add_to_clean = ""
                 for token in split:
