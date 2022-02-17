@@ -96,3 +96,14 @@ will be locked for a few ms. Also, it can result in non-optimal storage through 
 ```bash
 curl --location --request POST 'http://127.0.0.1:5000/flush'
 ```
+
+### Optimize Index
+
+Merges multiple segments together, reducing memory and speeding up searches. Call once bulk indexing is complete.
+
+**Work in Progress**
+
+
+```bash
+curl --location --request POST 'http://127.0.0.1:5000/optimize'
+```
