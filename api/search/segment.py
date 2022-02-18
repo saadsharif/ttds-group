@@ -8,7 +8,7 @@ from search.posting import TermPosting
 from search.store import Store
 
 # new segment rolled over on hitting this
-DEFAULT_MAX_DOCS_PER_SEGMENT = 1000
+DEFAULT_MAX_DOCS_PER_SEGMENT = 2000
 
 
 def _create_segment_id():
