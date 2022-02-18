@@ -197,6 +197,8 @@ class Segment:
     # this closes the segment on shutdown
     def close(self):
         self._index.close()
+        for doc_values in self._doc_values:
+            doc_values.close()
 
     # These methods support merging segments - no locking required - we assume this is called in a single thread with
     # no active reads of writing on it
@@ -257,5 +259,10 @@ class Segment:
         return self._min_doc_id, self._max_doc_id
 
     def delete(self):
+        self.close()
         if os.path.exists(self._posting_file):
             os.remove(self._posting_file)
+        for path in self._doc_value_fields.values():
+            if os.path.exists(path):
+                os.remove(path)
+
