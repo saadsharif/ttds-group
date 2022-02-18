@@ -197,7 +197,7 @@ class Segment:
     # this closes the segment on shutdown
     def close(self):
         self._index.close()
-        for doc_values in self._doc_values:
+        for doc_values in self._doc_values.values():
             doc_values.close()
 
     # These methods support merging segments - no locking required - we assume this is called in a single thread with
