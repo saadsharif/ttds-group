@@ -8,6 +8,7 @@ class BERTModule:
             0:'bert-base-uncased' 
             1:'bert-large-uncased' 
             2: "allenai/longformer-base-4096"
+            3: "distilbert-base-uncased"
         tokenizer: pretrained tokenizer
         model: pretrained model
     Methods:
@@ -18,7 +19,7 @@ class BERTModule:
         '''
         Input: (vmodel) string indicating the pre-trained model; default is 'bert-base-uncased' 
         '''
-        self.model_choice = ['bert-base-uncased', 'bert-large-uncased', "allenai/longformer-base-4096"]
+        self.model_choice = ['bert-base-uncased', 'bert-large-uncased', "allenai/longformer-base-4096","distilbert-base-uncased"]
         self.vmodel = vmodel
         # Load pre-trained model tokenizer (vocabulary)
         print('Loading model tokenizer...',end='')
@@ -98,15 +99,21 @@ class BERTModule:
         # tells PyTorch not to construct the compute graph during this forward pass
         with torch.no_grad():
             outputs = self.model(**encoded_sent)
-            #hidden_states = outputs[2]
+            #outputs dim:
+            #last_hidden_state
+            #pooler_output --- no for distilbert
+            #hidden_states
+            if self.vmodel==3: # distilbert
+                hidden_states = outputs[1]
             #hidden_states dim:
             #The layer number (13 layers)
             #The batch number (1 sentence)
             #The word / token number (number of tokens in the sentence)
             #The hidden unit / feature number (number of features for a token)
-        #    second2last_layer=hidden_states[-2][0] # use the second to last layer and average all tokens vectors
-        #    sent_embedding=torch.mean(second2last_layer, dim=0) # tensor output
-            sent_embedding=outputs.pooler_output[0] # tensor output
+                second2last_layer=hidden_states[-2][0] # use the second to last layer and average all tokens vectors
+                sent_embedding=torch.mean(second2last_layer, dim=0) # tensor output
+            else:
+                sent_embedding=outputs.pooler_output[0] # tensor output
         return sent_embedding
 
     def __truncated_embedding(self,sent_tokens,max_len):
