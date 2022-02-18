@@ -14,7 +14,16 @@ class Document:
         self.fields = fields
 
     def __str__(self):
-        return " ".join(list(self.fields.values()))
+        values = []
+        for value in self.fields.values():
+            if isinstance(value, str):
+                values.append(value)
+            elif isinstance(value, list):
+                values.append(" ".join(value))
+            else:
+                # probably remove this later - can also consider ints etc
+                print(f"warning doc {id} has non str fields which will not be indexed")
+        return " ".join(values)
 
     def __iter__(self):
         sentences = tokenize.sent_tokenize(str(self))

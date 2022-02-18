@@ -28,7 +28,7 @@ def load_index():
     index_dir = os.path.join(os.getcwd(), 'index')
     os.makedirs(index_dir, exist_ok=True)
     # we stem and enable stop words for now
-    index = Index(index_dir, Analyzer(stop_words, True))
+    index = Index(index_dir, Analyzer(stop_words, True), doc_value_fields=['authors'])
     index.load()
     print('Index ready')
 

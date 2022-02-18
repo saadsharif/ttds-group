@@ -1,3 +1,4 @@
+import ujson as json
 import os.path
 import sys
 import time
@@ -32,12 +33,10 @@ class Segment:
         self._min_doc_id = sys.maxsize
         self._doc_value_fields = {}
         self._doc_values = {}
-        self._doc_values_buffer = {}
         for field in doc_value_fields:
             doc_value_store_path = os.path.join(storage_path, f"{self._segment_id}-{field}.dv")
             self._doc_values[field] = Store(doc_value_store_path)
             self._doc_value_fields[field] = doc_value_store_path
-            self._doc_values_buffer[field] = {}
         self._flush_lock = ReadWriteLock()
         self._indexing_lock = ReadWriteLock()
 
@@ -58,7 +57,7 @@ class Segment:
         return self._max_doc_id - self._min_doc_id
 
     # this adds the document to the buffer only, the flush writes it to disk
-    def add_document(self, doc_id, terms, doc_value_fields={}):
+    def add_document(self, doc_id, terms, doc_values={}):
         # IMPORTANT: we allow only require a lock on indexing - this means indexing could happen during querying. This
         # results in potentially dirty reads (not a big deal). We will be blocked by a flush though - rare!
         self._indexing_lock.acquire_write()
@@ -74,9 +73,9 @@ class Segment:
                     self._buffer[term] = term_posting
                 self._buffer[term].add_position(doc_id, p)
                 p += 1
-            for field, values in doc_value_fields.items():
-                if field in self._doc_values_buffer:
-                    self._doc_values_buffer[field][doc_id] = values
+            for field, values in doc_values.items():
+                if field in self._doc_values:
+                    self._doc_values[field][doc_id] = json.dumps(values)
             if doc_id > self._max_doc_id:
                 self._max_doc_id = doc_id
             if doc_id < self._min_doc_id:
@@ -104,16 +103,6 @@ class Segment:
             return TermPosting.from_store_format(self._index[term])
 
     def get_doc_values(self, doc_id, field):
-        # can't read whilst flushing the buffer - maybe not needed - prevents empty results basically
-        self._flush_lock.acquire_read()
-        values = []
-        if not self._is_flushed:
-            if field in self._doc_values_buffer and doc_id in self._doc_values_buffer[field]:
-                values = self._doc_values_buffer[field][doc_id]
-            self._flush_lock.release_read()
-            return values
-        # don't need the read lock on an immutable segments
-        self._flush_lock.release_read()
         if field in self._doc_values and doc_id in self._doc_values[field]:
             return self._doc_values[field][doc_id]
 
@@ -121,15 +110,12 @@ class Segment:
     def flush(self):
         # whilst we're flushing, reads can continue on the buffer. Indexing can't.
         try:
+            start_time = time.time()
             self._indexing_lock.acquire_write()
             print(f"Flushing segment {self._segment_id}")
             # flush the term buffer in sorted term order
             for term in sorted(self._buffer):
                 self._index[term] = self._buffer[term].to_store_format()
-            # flush the doc values
-            for field, doc_values in self._doc_values_buffer.items():
-                for doc_id, doc_value in doc_values.items():
-                    self._doc_values[field][doc_id] = doc_value
             # this flush is just to prevent queries from reading an empty buffer - might not be needed. Note we do this
             # only for the period of clearing the buffer - not during flushing - very short period
             self._flush_lock.acquire_write()
@@ -147,7 +133,7 @@ class Segment:
         # release the memory of the segment
         self._buffer.clear()
         self._flush_lock.release_write()
-        print(f"Segment {self._segment_id} flushed")
+        print(f"Segment {self._segment_id} flushed in {time.time()-start_time}s")
         self._indexing_lock.release_write()
 
     def __getstate__(self):
@@ -160,7 +146,6 @@ class Segment:
         self._segment_id, self._posting_file, self._is_flushed, self._max_docs, self._max_doc_id, self._min_doc_id, self._doc_value_fields = state
         print(f"Loading segment {self._segment_id}")
         self._buffer = {}
-        self._doc_values_buffer = {}
         # if we're unpickling we're loading - unknown state potentially, close the segment
         self._is_flushed = True
         self._flush_lock = ReadWriteLock()
@@ -195,11 +180,19 @@ class Segment:
     def items(self):
         self._flush_lock.acquire_read()
         if not self.is_flushed():
+            # this isn't really thread safe
             yield from self._buffer.items()
-        # don't need a read lock on immutable store - it cant reopen
-        self._flush_lock.release_read()
-        for term, posting in self._index.items():
-            yield term, TermPosting.from_store_format(posting)
+            self._flush_lock.release_read()
+        else:
+            # don't need a read lock on immutable store - it cant be changed
+            self._flush_lock.release_read()
+            for term, posting in self._index.items():
+                yield term, TermPosting.from_store_format(posting)
+
+    def doc_value_items(self):
+        for field, doc_values in self._doc_values.items():
+            for doc_id, doc_value in doc_values.items():
+                yield field, doc_id, json.loads(doc_value)
 
     # this closes the segment on shutdown
     def close(self):
@@ -220,8 +213,15 @@ class Segment:
         self._merge_doc_ids(l_segment, r_segment)
 
     def _merge_doc_ids(self, l_segment, r_segment):
-        # TODO: merge doc ids
-        pass
+        print(f"Merging doc ids into {self._segment_id}...")
+        l_iter = iter(l_segment.doc_value_items())
+        r_iter = iter(r_segment.doc_value_items())
+        # we rely on the left segment having lower doc ids than the right
+        for field, doc_id, doc_value in l_iter:
+            self._doc_values[field][doc_id] = json.dumps(doc_value)
+        for field, doc_id, doc_value in r_iter:
+            self._doc_values[field][doc_id] = json.dumps(doc_value)
+        print(f"Doc ids merged")
 
     # merge the postings together - note we skip the buffer as it is faster (given no seeking required)
     def _merge_postings(self, l_segment, r_segment):

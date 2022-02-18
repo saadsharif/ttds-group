@@ -147,7 +147,12 @@ class Index:
             self._id_mappings[self._current_doc_id] = document.id
             # TODO: no separate indices per field currently - we might want to add this
             terms = self.analyzer.process_document(document)
-            self.__get_writeable_segment().add_document(self._current_doc_id, terms)
+            # doc values
+            doc_values = {}
+            for field in self._doc_value_fields:
+                if field in document.fields:
+                    doc_values[field] = document.fields[field]
+            self.__get_writeable_segment().add_document(self._current_doc_id, terms, doc_values=doc_values)
             # persist to the bd
             self._doc_store[str(self._current_doc_id)] = document.fields
             doc_id = self._current_doc_id
@@ -177,7 +182,11 @@ class Index:
             for document in docs_to_index:
                 self._id_mappings[self._current_doc_id] = document.id
                 terms = self.analyzer.process_document(document)
-                self.__get_writeable_segment().add_document(self._current_doc_id, terms)
+                doc_values = {}
+                for field in self._doc_value_fields:
+                    if field in document.fields:
+                        doc_values[field] = document.fields[field]
+                self.__get_writeable_segment().add_document(self._current_doc_id, terms, doc_values=doc_values)
                 doc_ids.append((document.id, self._current_doc_id))
                 doc_batch[str(self._current_doc_id)] = document.fields
                 self._current_doc_id += 1

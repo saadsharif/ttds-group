@@ -6,7 +6,7 @@ from search.models import Document
 class DocumentSchema(Schema):
     id = fields.Str()
     title = fields.Str(required=True)
-    authors = fields.Str(required=False)
+    authors = fields.List(fields.Str(), default=[], missing=[], required=False)
     abstract = fields.Str(required=True)
     subject = fields.Str(required=False)
     body = fields.Str(required=False, allow_none=True)
