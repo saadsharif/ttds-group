@@ -6,7 +6,7 @@ import uuid
 from bidict import bidict
 from search.analyzer import Analyzer
 from search.bert import BERTModule
-from search.exception import IndexException, SearchException
+from search.exception import IndexException, SearchException, MergeException
 from search.lock import ReadWriteLock
 from search.models import Result
 from search.posting import TermPosting
@@ -43,9 +43,25 @@ class Index:
         self._doc_value_fields = doc_value_fields
         # merge lock - only one merge at once
         self._merge_lock = ReadWriteLock()
+        # merge update - this is used when we update the list of segments post merge - reads can't occur during this
+        self._segment_update_lock = ReadWriteLock()
 
     def _get_db_path(self):
         return os.path.join(self._storage_path, 'index.idb')
+
+    # not thread safe and pickles the index - mostly meta and doc ids
+    def _store_index_meta(self):
+        with open(self._get_db_path(), 'wb') as index_file:
+            print(f"Saving state file to {self._get_db_path()}...", end="")
+            state = self.__dict__.copy()
+            # we don't store the doc store
+            del state['_doc_store']
+            del state['_write_lock']
+            del state['_merge_lock']
+            del state['_segment_update_lock']
+            del state['_vector_model']
+            pickle.dump(state, index_file)
+            print("OK")
 
     # saves the index to disk - for now just pickle down given the sizes
     def save(self):
@@ -54,16 +70,7 @@ class Index:
         print(f"Syncing document store...", end="")
         self._doc_store.sync()
         print("OK")
-        with open(self._get_db_path(), 'wb') as index_file:
-            print(f"Saving state file to {self._get_db_path()}...", end="")
-            state = self.__dict__.copy()
-            # we don't store the doc store
-            del state['_doc_store']
-            del state['_write_lock']
-            del state['_merge_lock']
-            del state['_vector_model']
-            pickle.dump(state, index_file)
-            print("OK")
+        self._store_index_meta()
         if len(self._segments) > 0:
             # flush the last segment if we need to
             most_recent = self._segments[-1]
@@ -91,15 +98,6 @@ class Index:
             segment.close()
         print("OK")
         self._doc_store.close()
-
-    # dumps to readable format
-    def dump(self):
-        for segment in self._segments:
-            # TODO: Allow this to iterate
-            for term, postings in segment.items():
-                print(f'{term}:{postings.doc_frequency}')
-                for posting in postings:
-                    print(f'\t{posting.doc_id}: {",".join([str(pos) for pos in posting])}')
 
     # theoretically merges segments together to avoid too many files -
     # really an optimisation if we needed as non-trivial
@@ -207,11 +205,13 @@ class Index:
         # this should be improved e.g. using a bloom filter or some bit set, inside the segment though -i.e.
         # it should return [] quickly
         term_posting = TermPosting()
+        self._segment_update_lock.acquire_read()
         if term:
             for segment in self._segments:
                 termPosting = segment.get_term(term)
                 if termPosting:
                     term_posting.add_term_info(termPosting)
+        self._segment_update_lock.release_read()
         return term_posting
 
     def get_vector(self, query):
@@ -233,35 +233,45 @@ class Index:
         s = 0
         while s < num_segments - 1:
             if self._segments[s].is_flushed() and self._segments[s + 1].is_flushed():
+                # number of documents is a crude metric of size but avg should be same across index
                 combined_size = self._segments[s].number_of_documents + self._segments[s + 1].number_of_documents
                 if combined_size < smallest_combined_size:
                     smallest_combined_size = combined_size
                     smallest_pos = s
             s += 1
         if smallest_pos == -1:
-            print(f"No candidate segments to merge - need atleast two flushed segments", flush=True)
+            print(f"No candidate segments to merge - need at least two flushed segments", flush=True)
             self._merge_lock.release_write()
             return num_segments, num_segments
         # we need segments at s and s + 1
         print(
-            f"Initiating merge with segments {self._segments[smallest_pos].segment_id} and {self._segments[smallest_pos+1].segment_id}...",
+            f"Initiating merge with segments {self._segments[smallest_pos].segment_id} and {self._segments[smallest_pos + 1].segment_id}...",
             flush=True)
         start_time = time.time()
         # select the two smallest ADJACENT segments - this ensures doc ids are kept in order on disk
         # this could be improved - we could for example ensure our segments were sorted on flush to speed this up with
         # a linear merge to produce a combined term list
         # produce a combined term dump
-        terms = set(self._segments[smallest_pos].keys()).union(set(self._segments[smallest_pos + 1].keys()))
-        print(f"{len(terms)} terms in combined merge set", flush=True)
-        # new_segment = Segment(_create_segment_id(), self._storage_path, self._doc_value_fields)
-        for term in terms:
-            postings = self._segments[smallest_pos].get_term(term)
-            if postings:
-                postings.add_term_info(self._segments[smallest_pos].get_term(term))
-            else:
-                postings = self._segments[smallest_pos].get_term(term)
-
-        print(f"Merge completed in {time.time() - start_time}s")
-        # now we need a stop the word event to modify the segments list, removing are two old ones and inserting our new one
-        self._merge_lock.release_write()
+        l_segment = self._segments[smallest_pos]
+        r_segment = self._segments[smallest_pos + 1]
+        try:
+            new_segment = Segment(_create_segment_id(), self._storage_path, self._doc_value_fields)
+            new_segment.merge(l_segment, r_segment)
+            # flush the new segment
+            new_segment.flush()
+            print(f"Merge completed in {time.time() - start_time}s")
+            self._segment_update_lock.acquire_write()
+            # a stop the word event to modify the segments list, removing are two old ones and inserting our new one
+            new_segments = self._segments[:smallest_pos] + [new_segment] + self._segments[smallest_pos+2:]
+            self._segments = new_segments
+            l_segment.delete()
+            r_segment.delete()
+            # we also need to write our new index file
+            self._store_index_meta()
+            self._segment_update_lock.release_write()
+            self._merge_lock.release_write()
+        except Exception as e:
+            self._merge_lock.release_write()
+            self._segment_update_lock.release_write()
+            raise MergeException(f"Unexpected exception during merge - {e}")
         return num_segments, len(self._segments)
