@@ -217,7 +217,11 @@ class Segment:
         self._min_doc_id = min(min_id_l, min_id_r)
         self._max_doc_id = max(max_id_l, max_id_r)
         self._merge_postings(l_segment, r_segment)
+        self._merge_doc_ids(l_segment, r_segment)
+
+    def _merge_doc_ids(self, l_segment, r_segment):
         # TODO: merge doc ids
+        pass
 
     # merge the postings together - note we skip the buffer as it is faster (given no seeking required)
     def _merge_postings(self, l_segment, r_segment):

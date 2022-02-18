@@ -113,7 +113,7 @@ class Index:
     def number_of_docs(self):
         return self.current_id - 1
 
-    # IMPORTANT: This is not thread safe! it is for use in this class only within methods which lock
+    # IMPORTANT: This assumes single threaded indexing
     def __get_writeable_segment(self):
         if len(self._segments) == 0:
             # starting case - create one with new id
@@ -121,14 +121,18 @@ class Index:
             return self._segments[-1]
         most_recent = self._segments[-1]
         if most_recent.is_flushed():
+            self._segment_update_lock.acquire_write()
             # segment has been flushed, create a new one
             self._segments.append(Segment(_create_segment_id(), self._storage_path, self._doc_value_fields))
+            self._segment_update_lock.release_write()
             return self._segments[-1]
         if not most_recent.has_buffer_capacity():
             # segment is open but has no capacity so flush
             most_recent.flush()
             # insert new
+            self._segment_update_lock.acquire_write()
             self._segments.append(Segment(_create_segment_id(), self._storage_path, self._doc_value_fields))
+            self._segment_update_lock.release_write()
         return self._segments[-1]
 
     # this is an append only operation. We generated a new internal id for the document and store a mapping between the
@@ -259,7 +263,6 @@ class Index:
             new_segment.merge(l_segment, r_segment)
             # flush the new segment
             new_segment.flush()
-            print(f"Merge completed in {time.time() - start_time}s")
             self._segment_update_lock.acquire_write()
             # a stop the word event to modify the segments list, removing are two old ones and inserting our new one
             new_segments = self._segments[:smallest_pos] + [new_segment] + self._segments[smallest_pos+2:]
@@ -268,6 +271,7 @@ class Index:
             r_segment.delete()
             # we also need to write our new index file
             self._store_index_meta()
+            print(f"Merge completed in {time.time() - start_time}s")
             self._segment_update_lock.release_write()
             self._merge_lock.release_write()
         except Exception as e:

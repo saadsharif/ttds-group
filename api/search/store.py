@@ -41,6 +41,7 @@ def parse_value(line):
     return right.decode('utf8')
 
 
+# Our dictionary store on disk. Only thread safe on gets NOT on writes or iteration!
 class Store(dict):
     START_FLAG = b'# FILE-DICT v1\n'
 
@@ -107,16 +108,10 @@ class Store(dict):
 
     def __getitem__(self, key):
         offset = self._offsets[key]
-        self._file.seek(offset)
-        line = self._file.readline()
-        return parse_value(line)
-
-    """
-        # TODO: we should allow a reader to opened on this and reused for each query thread
-            with open(self.path, 'r+b') as reader:
-                reader.seek(offset)
-                line = reader.readline()
-            return parse_posting(line)"""
+        with open(self.path, 'r+b') as reader:
+            reader.seek(offset)
+            line = reader.readline()
+            return parse_value(line)
 
     def __setitem__(self, key, value):
         if key in self._offsets:
@@ -164,6 +159,7 @@ class Store(dict):
         self._offsets = {}
         self._free_lines = []
 
+    # THIS IS NOT THREAD SAFE
     def items(self):
         offset = 0
         while True:
