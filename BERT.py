@@ -51,7 +51,7 @@ class BERTModule:
         if len(sent_tokens) <= max_len:
             return self.__sentence_embedding(input).tolist() 
         else:
-            return self.__truncated_embedding(input,sent_tokens,max_len).tolist()
+            return self.__truncated_embedding(sent_tokens,max_len).tolist()
 
 
     def __query_embedding(self,query):
@@ -109,15 +109,15 @@ class BERTModule:
             sent_embedding=outputs.pooler_output[0] # tensor output
         return sent_embedding
 
-    def __truncated_embedding(self,str,sent_tokens,max_len):
+    def __truncated_embedding(self,sent_tokens,max_len):
         doc_Vectors = []
-        while len(sent_tokens) > max_len:
-            trunc_sent = self.tokenizer.decode(sent_tokens[1:(max_len-2)])
+        while len(sent_tokens) > max_len-2:
+            trunc_sent = self.tokenizer.decode(sent_tokens[1:(max_len-3)])
+            rest_sent = self.tokenizer.decode(sent_tokens[(max_len-3):-1])
             embedding = self.__sentence_embedding(trunc_sent)
             doc_Vectors.append(embedding)
-            str = str.replace(trunc_sent,'')
-            sent_tokens = self.tokenizer(str)['input_ids']
-        last_vec = self.__sentence_embedding(str)
+            sent_tokens = self.tokenizer(rest_sent)['input_ids']
+        last_vec = self.__sentence_embedding(rest_sent)
         doc_Vectors.append(last_vec)
         embedding = torch.mean(torch.stack(doc_Vectors), dim=0)# tensor output
         return embedding
