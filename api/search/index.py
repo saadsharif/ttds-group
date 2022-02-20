@@ -189,7 +189,8 @@ class Index:
                     if field in document.fields:
                         # TODO: we assume all doc values are a list
                         doc_values[field] = document.fields[field]
-                        doc_value_terms += [value for values in [self.analyzer.tokenize(value) for value in document.fields[field]] for value in values]
+                        doc_value_terms += [f"{field}:{'_'.join(self.analyzer.tokenize(value))}" for value in
+                                            document.fields[field]]
                 terms = doc_value_terms + terms
                 self.__get_writeable_segment().add_document(self._current_doc_id, terms, doc_values=doc_values)
                 doc_ids.append((document.id, self._current_doc_id))
@@ -208,8 +209,15 @@ class Index:
         return {field: doc[field] for field in fields if field in doc}
 
     def search(self, query):
+        # filters are currently appended as an AND phrase - this isn't ideal but these doc value fields are also indexed
         try:
-            docs, facets, total = Query(self).execute(query.query, query.score, query.max_results, query.offset, query.facets, query.filters)
+            filters = [f"{filter.field}:{'_'.join(self.analyzer.tokenize(filter.value))}" for filter in query.filters]
+            query_text = query.query
+            for filter in filters:
+                query_text = f"{query_text} AND {filter}"
+            docs, facets, total = Query(self).execute(query_text, query.score, query.max_results, query.offset,
+                                                      query.facets)
+
             fields = set(query.fields)
             return [Result(self._id_mappings[doc.doc_id], doc.score, fields=self._get_document(str(doc.doc_id), fields))
                     for

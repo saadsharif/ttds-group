@@ -268,10 +268,7 @@ class Query:
                     sorted(facet_values[facet.field].items(), key=itemgetter(1), reverse=True)[:facet.num_values])
         return facet_values
 
-    def execute(self, query, score, max_results, offset, facets, filters):
-        # filters are currently appended as an AND phrase - this isn't ideal but these doc value fields are also indexed
-        for filter in filters:
-            query = f"{query} AND \"{filter.value}\""
+    def execute(self, query, score, max_results, offset, facets):
         parsed = self._parser(query)
         docs = self.evaluate(parsed[0], score=score)
         if len(docs) == 1 and docs[0].doc_id == 0:
