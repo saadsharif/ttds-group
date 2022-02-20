@@ -204,7 +204,7 @@ class Index:
 
     def search(self, query):
         try:
-            docs, total = Query(self).execute(query.query, query.score, query.max_results)
+            docs, total = Query(self).execute(query.query, query.score, query.max_results, query.offset)
             fields = set(query.fields)
             return [Result(self._id_mappings[doc.doc_id], doc.score, fields=self._get_document(str(doc.doc_id), fields))
                     for

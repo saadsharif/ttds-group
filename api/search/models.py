@@ -32,9 +32,10 @@ class Document:
 
 
 class Search:
-    def __init__(self, query, score, max_results, fields=[], filters={}):
+    def __init__(self, query, score, max_results, offset, fields=[], filters={}):
         self.query = query
         self.score = score
         self.filters = filters
         self.fields = fields
         self.max_results = max_results
+        self.offset = offset

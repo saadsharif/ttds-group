@@ -154,7 +154,8 @@ class Segment:
         print(f"Loading index segment {self._segment_id} from {self._posting_file}...")
         self._index = Store(self._posting_file)
         print(f"Index loaded for {self._segment_id}")
-        # load the facets
+        # load the doc values
+        self._doc_values = {}
         for field, path in self._doc_value_fields.items():
             print(f"Loading field {field} in segment {self._segment_id}...")
             self._doc_values[field] = Store(path)

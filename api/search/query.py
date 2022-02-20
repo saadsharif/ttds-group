@@ -251,7 +251,7 @@ class Query:
             scored_postings.append(ScoredPosting(doc_posting, score=score))
         return scored_postings
 
-    def execute(self, query, score, max_results):
+    def execute(self, query, score, max_results, offset):
         parsed = self._parser(query)
         docs = self.evaluate(parsed[0], score=score)
         if len(docs) == 1 and docs[0].doc_id == 0:
@@ -259,5 +259,6 @@ class Query:
             return [], 0
         # we would add pagination here
         if score:
-            return heapq.nlargest(max_results, docs, key=lambda doc: doc.score), len(docs)
-        return heapq.nsmallest(max_results, docs, key=lambda doc: doc.doc_id), len(docs)
+            # if we have an offset we need offset + max_results
+            return heapq.nlargest(max_results + offset, docs, key=lambda doc: doc.score)[offset:offset+max_results], len(docs)
+        return heapq.nsmallest(max_results, docs, key=lambda doc: doc.doc_id)[offset:offset+max_results], len(docs)
