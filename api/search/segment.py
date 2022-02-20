@@ -114,10 +114,6 @@ class Segment:
         if term in self._index:
             return TermPosting.from_store_format(self._index[term])
 
-    def get_doc_values(self, doc_id, field):
-        if field in self._doc_values and doc_id in self._doc_values[field]:
-            return self._doc_values[field][doc_id]
-
     # flushed the buffer to disk - this can be called manually and "closes" the segment to additions making it immutable
     def flush(self):
         # whilst we're flushing, reads can continue on the buffer. Indexing can't.

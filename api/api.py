@@ -3,7 +3,7 @@ import ujson as json
 import os
 from json import JSONDecodeError
 from flask.json import JSONEncoder
-from flask import Flask, jsonify, request
+from flask import Flask, request
 from marshmallow import ValidationError
 
 from models.document import DocumentSchema
@@ -45,6 +45,13 @@ class IndexServer(Flask):
 app = IndexServer(__name__)
 
 
+def jsonify(data):
+    return app.response_class(
+        f"{json.dumps(data, indent=2)}\n",
+        mimetype=app.config["JSONIFY_MIMETYPE"],
+    )
+
+
 @app.route('/search', methods=['POST'])
 def search():
     try:
@@ -59,7 +66,7 @@ def search():
 @app.route('/index', methods=['POST'])
 def index_doc():
     try:
-        document = DocumentSchema().load(request.get_json())
+        document = DocumentSchema().load(json.loads(request.data.decode()))
         # no per field search currently
         doc_id, iid = index.add_document(document)
         return jsonify({
@@ -126,15 +133,6 @@ def on_exit_api():
 
 
 atexit.register(on_exit_api)
-
-
-class CustomJSONEncoder(JSONEncoder):
-    def default(self, obj):
-        try:
-            return json.dumps(obj)
-        except TypeError:
-            return JSONEncoder.default(self, obj)
-
 
 if __name__ == '__main__':
     app.run()

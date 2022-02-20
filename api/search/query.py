@@ -260,7 +260,7 @@ class Query:
                 for doc in docs:
                     values = self._index.get_doc_values(facet.field, doc.doc_id)
                     for value in values:
-                        if value in facet_values[facet.field]:
+                        if not value in facet_values[facet.field]:
                             facet_values[facet.field][value] = 1
                         else:
                             facet_values[facet.field][value] += 1

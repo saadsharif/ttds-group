@@ -20,4 +20,5 @@ class Results:
 class ResultsSchema(Schema):
     hits = fields.List(fields.Nested(ResultSchema))
     total_hits = fields.Int()
+    facets = fields.Dict()
     request_id = fields.Str()

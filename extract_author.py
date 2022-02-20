@@ -5,6 +5,7 @@ import sys
 import ujson as json
 
 import requests
+from regex import regex
 
 
 def read_gz(filename):
@@ -17,6 +18,19 @@ def read_ndjson(filename):
     with open(filename, 'r') as f:
         for line in f:
             yield line
+
+
+
+def get_authors(authors):
+    authors = [author for author in authors.split(',') if
+               author.strip() != '']
+    # split or , and 'and'
+    return [sub_author.strip() for author in authors for sub_author in author.split(' and ') if
+                      sub_author.strip() != '']
+
+
+def remove_param(authors):
+    return regex.sub(r'\([^()]*+(?:(?R)[^()]*)*+\)', '', authors)
 
 
 parser = argparse.ArgumentParser(description="Extract author")
@@ -36,7 +50,8 @@ if args.file:
     with open(args.output, 'w') as output_file:
         for line in reader(args.file):
             doc = json.loads(line)
-            authors = doc['authors']
+            authors = [author.strip() for author in doc['authors'].split(',') if
+                              author.strip() != '']
             # split or , and 'and'
-            doc['authors'] = [author.strip() for authorList in authors.split(',') for author in authorList.split('and')]
-            output_file.write(json.dumps(doc)+'\n')
+            doc['authors'] = get_authors(remove_param(doc['authors']))
+            output_file.write(json.dumps(doc) + '\n')
