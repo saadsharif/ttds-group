@@ -28,6 +28,25 @@ curl --location --request POST 'http://127.0.0.1:5000/search' \
 }'
 ```
 
+We support:
+
+1. Pagination
+2. Filtering fields - you ask only print specific fields to keep the request size down
+
+For example, the below requests results between 10 and 20. Only the title is shown:
+
+
+```bash
+curl --location --request POST 'http://127.0.0.1:5000/search' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "query": "test",
+    "offset": 10,
+    "max_results": 10,
+    "fields": ["title"]
+}'
+```
+
 ### Indexing a single doc
 
 
