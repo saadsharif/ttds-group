@@ -1,6 +1,7 @@
 import heapq
 import math
 import time
+from operator import itemgetter
 
 from pyparsing import (
     Word,
@@ -251,14 +252,34 @@ class Query:
             scored_postings.append(ScoredPosting(doc_posting, score=score))
         return scored_postings
 
-    def execute(self, query, score, max_results, offset):
+    def _get_facets(self, facets, docs):
+        facet_values = {}
+        for facet in facets:
+            if self._index.has_doc_id(facet.field):
+                facet_values[facet.field] = {}
+                for doc in docs:
+                    values = self._index.get_doc_values(facet.field, doc.doc_id)
+                    for value in values:
+                        if value in facet_values[facet.field]:
+                            facet_values[facet.field][value] = 1
+                        else:
+                            facet_values[facet.field][value] += 1
+                facet_values[facet.field] = dict(
+                    sorted(facet_values[facet.field].items(), key=itemgetter(1), reverse=True)[:facet.num_values])
+        return facet_values
+
+    def execute(self, query, score, max_results, offset, facets):
         parsed = self._parser(query)
         docs = self.evaluate(parsed[0], score=score)
         if len(docs) == 1 and docs[0].doc_id == 0:
             # a doc based on a stop word search
             return [], 0
+        facet_values = {}
+        if len(facets) > 0:
+            facet_values = self._get_facets(facets, docs)
         # we would add pagination here
         if score:
             # if we have an offset we need offset + max_results
-            return heapq.nlargest(max_results + offset, docs, key=lambda doc: doc.score)[offset:offset+max_results], len(docs)
-        return heapq.nsmallest(max_results, docs, key=lambda doc: doc.doc_id)[offset:offset+max_results], len(docs)
+            return heapq.nlargest(max_results + offset, docs, key=lambda doc: doc.score)[
+                   offset:offset + max_results], facet_values, len(docs)
+        return heapq.nsmallest(max_results, docs, key=lambda doc: doc.doc_id)[offset:offset + max_results], facet_values, len(docs)

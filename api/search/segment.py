@@ -86,6 +86,18 @@ class Segment:
             self._indexing_lock.release_write()
             raise e
 
+    def get_doc_values(self, field, doc_id):
+        # fast check to avoid lookups
+        if not field in self._doc_values:
+            return None
+        if doc_id < self._min_doc_id:
+            return None
+        if doc_id > self._max_doc_id:
+            return None
+        if doc_id in self._doc_values[field]:
+            return json.loads(self._doc_values[field][doc_id])
+        return None
+
     def get_term(self, term):
         # use the buffer if this is an in memory segment
         # can't read whilst flushing the buffer - maybe not needed - prevents empty results basically
@@ -133,7 +145,7 @@ class Segment:
         # release the memory of the segment
         self._buffer.clear()
         self._flush_lock.release_write()
-        print(f"Segment {self._segment_id} flushed in {time.time()-start_time}s")
+        print(f"Segment {self._segment_id} flushed in {time.time() - start_time}s")
         self._indexing_lock.release_write()
 
     def __getstate__(self):
@@ -266,4 +278,3 @@ class Segment:
         for path in self._doc_value_fields.values():
             if os.path.exists(path):
                 os.remove(path)
-

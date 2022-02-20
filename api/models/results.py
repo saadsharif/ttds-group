@@ -10,9 +10,10 @@ class ResultSchema(Schema):
 
 
 class Results:
-    def __init__(self, hits, total_hits):
+    def __init__(self, hits, total_hits, facets):
         self.total_hits = total_hits
         self.hits = hits
+        self.facets = facets
         self.request_id = str(uuid.uuid1())
 
 

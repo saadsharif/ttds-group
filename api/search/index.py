@@ -204,12 +204,12 @@ class Index:
 
     def search(self, query):
         try:
-            docs, total = Query(self).execute(query.query, query.score, query.max_results, query.offset)
+            docs, facets, total = Query(self).execute(query.query, query.score, query.max_results, query.offset, query.facets)
             fields = set(query.fields)
             return [Result(self._id_mappings[doc.doc_id], doc.score, fields=self._get_document(str(doc.doc_id), fields))
                     for
                     doc in
-                    docs], total
+                    docs], facets, total
         except Exception as e:
             raise SearchException(f"Unexpected exception during indexing - {e}")
 
@@ -229,6 +229,21 @@ class Index:
 
     def get_vector(self, query):
         return self._vector_model.embedding(query)
+
+    def has_doc_id(self, field):
+        return field in self._doc_value_fields
+
+    def get_doc_values(self, field, doc_id):
+        self._segment_update_lock.acquire_read()
+        values = []
+        if field in self._doc_value_fields:
+            # once we find the segment we can break
+            for segment in self._segments:
+                values = segment.get_doc_values(field, doc_id)
+                if values is not None:
+                    break
+        self._segment_update_lock.release_read()
+        return values
 
     # merges two segments (together and flushed) to produce a larger segment - with the aim of speeding up searches
     def optimize(self):
@@ -274,7 +289,7 @@ class Index:
             new_segment.flush()
             self._segment_update_lock.acquire_write()
             # a stop the word event to modify the segments list, removing are two old ones and inserting our new one
-            new_segments = self._segments[:smallest_pos] + [new_segment] + self._segments[smallest_pos+2:]
+            new_segments = self._segments[:smallest_pos] + [new_segment] + self._segments[smallest_pos + 2:]
             self._segments = new_segments
             l_segment.delete()
             r_segment.delete()

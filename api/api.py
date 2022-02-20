@@ -48,8 +48,8 @@ app = IndexServer(__name__)
 @app.route('/search', methods=['POST'])
 def search():
     try:
-        hits, total = index.search(SearchSchema().load(request.get_json()))
-        results = Results(hits, total)
+        hits, facets, total = index.search(SearchSchema().load(request.get_json()))
+        results = Results(hits, total, facets)
         return jsonify(ResultsSchema().dump(results)), 200
         # TODO: Pass the request to API and marshall the responses
     except ValidationError as e:

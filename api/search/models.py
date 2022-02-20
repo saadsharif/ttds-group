@@ -32,10 +32,17 @@ class Document:
 
 
 class Search:
-    def __init__(self, query, score, max_results, offset, fields=[], filters={}):
+    def __init__(self, query, score, max_results, offset, fields=[], facets=[], filters={}):
         self.query = query
         self.score = score
         self.filters = filters
+        self.facets = facets
         self.fields = fields
         self.max_results = max_results
         self.offset = offset
+
+
+class Facet:
+    def __init__(self, field, num_values):
+        self.field = field
+        self.num_values = num_values
