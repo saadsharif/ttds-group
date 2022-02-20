@@ -182,10 +182,15 @@ class Index:
             for document in docs_to_index:
                 self._id_mappings[self._current_doc_id] = document.id
                 terms = self.analyzer.process_document(document)
+                # this allows exact matching on doc value fields TODO: really we should have a different index for this
+                doc_value_terms = []
                 doc_values = {}
                 for field in self._doc_value_fields:
                     if field in document.fields:
+                        # TODO: we assume all doc values are a list
                         doc_values[field] = document.fields[field]
+                        doc_value_terms += [value for values in [self.analyzer.tokenize(value) for value in document.fields[field]] for value in values]
+                terms = doc_value_terms + terms
                 self.__get_writeable_segment().add_document(self._current_doc_id, terms, doc_values=doc_values)
                 doc_ids.append((document.id, self._current_doc_id))
                 doc_batch[str(self._current_doc_id)] = document.fields
@@ -204,7 +209,7 @@ class Index:
 
     def search(self, query):
         try:
-            docs, facets, total = Query(self).execute(query.query, query.score, query.max_results, query.offset, query.facets)
+            docs, facets, total = Query(self).execute(query.query, query.score, query.max_results, query.offset, query.facets, query.filters)
             fields = set(query.fields)
             return [Result(self._id_mappings[doc.doc_id], doc.score, fields=self._get_document(str(doc.doc_id), fields))
                     for

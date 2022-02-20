@@ -268,7 +268,10 @@ class Query:
                     sorted(facet_values[facet.field].items(), key=itemgetter(1), reverse=True)[:facet.num_values])
         return facet_values
 
-    def execute(self, query, score, max_results, offset, facets):
+    def execute(self, query, score, max_results, offset, facets, filters):
+        # filters are currently appended as an AND phrase - this isn't ideal but these doc value fields are also indexed
+        for filter in filters:
+            query = f"{query} AND \"{filter.value}\""
         parsed = self._parser(query)
         docs = self.evaluate(parsed[0], score=score)
         if len(docs) == 1 and docs[0].doc_id == 0:
@@ -282,4 +285,5 @@ class Query:
             # if we have an offset we need offset + max_results
             return heapq.nlargest(max_results + offset, docs, key=lambda doc: doc.score)[
                    offset:offset + max_results], facet_values, len(docs)
-        return heapq.nsmallest(max_results, docs, key=lambda doc: doc.doc_id)[offset:offset + max_results], facet_values, len(docs)
+        return heapq.nsmallest(max_results, docs, key=lambda doc: doc.doc_id)[
+               offset:offset + max_results], facet_values, len(docs)

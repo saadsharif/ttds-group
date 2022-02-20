@@ -1,7 +1,7 @@
 from marshmallow import Schema, fields, post_load
 from marshmallow.validate import Range
 
-from search.models import Search, Facet
+from search.models import Search, Facet, Filter
 
 
 class FacetSchema(Schema):
@@ -13,6 +13,15 @@ class FacetSchema(Schema):
         return Facet(data['field'], data['num_values'])
 
 
+class FilterSchema(Schema):
+    field = fields.Str(required=True)
+    value = fields.Str(required=True)
+
+    @post_load
+    def make_filter(self, data, **kwargs):
+        return Filter(data['field'], data['value'])
+
+
 class SearchSchema(Schema):
     query = fields.Str(required=True)
     max_results = fields.Int(default=10, missing=10)
@@ -20,11 +29,9 @@ class SearchSchema(Schema):
     score = fields.Boolean(default=True, missing=True)
     iFields = fields.List(fields.Str(), default=[], missing=[], data_key="fields")
     facets = fields.List(fields.Nested(FacetSchema), default=[], missing=[])
-
-    # filters - expect string, date and maybe integer - likely will need polymorphic deserialization for
-    # different filter types
-    # https://github.com/marshmallow-code/marshmallow/issues/195
+    filters = fields.List(fields.Nested(FilterSchema), default=[], missing=[])
 
     @post_load
     def make_search(self, data, **kwargs):
-        return Search(data['query'], data['score'], data['max_results'], data['offset'], data['iFields'], data['facets'])
+        return Search(data['query'], data['score'], data['max_results'], data['offset'], data['iFields'],
+                      data['facets'], data['filters'])

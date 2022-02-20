@@ -10,7 +10,7 @@ class Analyzer:
         self._stemmer = Stemmer.Stemmer('porter')
         self._tokenizer = re.compile(r'\W+')
 
-    def _tokenize(self, text):
+    def tokenize(self, text):
         return self._tokenizer.split(text)
 
     def process_token(self, token):
@@ -48,7 +48,7 @@ class Analyzer:
         return terms
 
     def process(self, text):
-        tokens = self._tokenize(text)
+        tokens = self.tokenize(text)
         return self._process_tokens(tokens)
 
     def process_document(self, doc):
