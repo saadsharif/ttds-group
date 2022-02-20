@@ -80,7 +80,7 @@ if args.file:
             print(f"Indexed {success} docs in {end - start}s - {c} total in {end - start_total_time}s", flush=True)
         if failure > 0:
             print(f"WARNING: {failure} doc{'s' if failure > 1 else ''} failed to index", flush=True)
-    print("Flushing last segment...", end="")
+    print("Flushing last segment...", end="", flush=True)
     response = requests.post(f"http://{args.host}:{args.port}/flush", timeout=3600)
     if response.status_code == 200:
         print("OK")

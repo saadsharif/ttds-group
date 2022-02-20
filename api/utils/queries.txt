@@ -1,0 +1,1000 @@
+"charge density"
+"point spread"
+field
+general relativity
+hubble AND space
+power AND law
+"learning computer vision"
+"graph representation learning"
+active AND galactic AND nucleus
+mock AND theta AND functions
+phys rev lett
+optimal control
+single AND layer
+star AND forming AND galaxies
+time AND series AND forecasting
+"prove existence uniqueness"
+neutrinoless AND double
+NOT chain
+proper AND orthogonal AND decomposition
+"things iot"
+markov AND decision AND process
+recurrent AND neural AND network
+"star forming"
+predictive AND control
+hamilton AND jacobi
+"numerical experiments demonstrate"
+based AND machine
+pre trained
+probability density
+tensor AND scalar
+hubble space
+ab initio
+extensive AND experimental
+quantum phase
+"computed tomography ct"
+open AND quantum AND systems
+"proposed method"
+charge AND density
+microwave AND background
+de sitter spacetime
+high AND dimensional AND data
+time AND reversal AND symmetry
+equations
+component analysis
+condensed AND matter AND physics
+"current state art"
+multiple
+gravitational AND wave
+maximum AND likelihood AND estimation
+short AND term
+monte carlo simulation
+"artificial intelligence ai"
+magnitude
+mock AND theta
+machine learning
+series
+"inelastic neutron"
+"point spread function"
+core AND collapse
+based AND deep
+"agreement experimental data"
+multi AND armed AND bandit
+time
+von
+source AND code
+attracted AND considerable
+signal
+quantum key distribution
+"orthogonal multiple"
+unmanned AND aerial
+star AND formation AND activity
+pre trained models
+input AND multiple AND output
+"state art approaches"
+"low rank matrix"
+deep learning
+"optical coherence"
+methods
+NOT key
+NOT learning
+play AND crucial
+"noisy intermediate scale"
+uda
+future research
+"results show"
+bose einstein
+pierre AND auger
+gravitational AND wave
+machine learning
+supermassive AND black
+periodic AND boundary AND conditions
+"neural network"
+computer
+propose deep
+inert doublet model
+early AND data AND release
+primordial AND magnetic AND fields
+NOT deep
+data driven
+large magellanic
+orthogonal AND multiple AND access
+spin AND orbit
+optimal AND control AND problems
+achieving state
+"aerial vehicles"
+decomposition
+graph structured
+"multi label classification"
+density AND functional
+"neural network cnn"
+light matter
+coronal AND mass
+"code https"
+multi task learning
+electronic AND health AND records
+early AND data AND release
+neural AND networks
+state
+gamma AND ray AND bursts
+deep AND learning AND methods
+"signal noise ratio"
+static spherically
+mass AND loss
+variational AND autoencoder
+black AND hole AND binaries
+"automatic speech"
+neural network
+experiments
+play AND key
+multiple input
+plays AND important AND role
+"machine reading"
+base station
+survey satellite tess
+"type ia"
+method outperforms
+translation
+periodic AND boundary
+"quark gluon"
+extensive
+background
+"convex optimization problem"
+neural machine translation
+"plays important role"
+"orders magnitude faster"
+ml
+address issue propose
+random matrix
+time series data
+van AND der
+"static spherically"
+predictive
+rashba spin
+adversarial
+"star forming galaxies"
+"multiple input"
+double
+vector machine
+deep AND neural
+NOT mass
+"real world"
+model
+results demonstrate
+single layer
+"multi label"
+topological edge
+extensive experiments conducted
+simulation results demonstrate
+black
+machine AND learning
+deep AND reinforcement
+"experiments benchmark"
+millimeter wave
+state AND art AND performance
+results
+deep
+NOT csi
+black hole binary
+radio
+https
+optimal control
+"interference noise"
+"plays crucial"
+play important role
+benchmark datasets
+strength
+state AND art
+bose einstein
+neural
+"simulation results show"
+NOT learning
+play AND crucial
+surfaces
+black AND box
+massive machine
+chain AND monte
+cosmic microwave background
+"machine learning approach"
+show
+neural AND network
+machine AND learning AND approaches
+network
+"proposed approach"
+results
+large AND scale AND datasets
+"real world datasets"
+show proposed
+simulation
+"based deep"
+effect
+type AND ia
+nuclei
+log log log
+NOT ia
+double AND beta
+based AND machine AND learning
+star AND formation
+graph AND structured
+machine learning approaches
+output
+"things iot"
+active galactic nuclei
+real world
+double
+vector AND machine
+tensor scalar ratio
+tight AND binding
+spin AND orbit AND torque
+gravitational AND wave
+time AND series
+channel AND state AND information
+NOT black
+deep AND learning AND framework
+large
+deep AND learning
+functional
+"semi supervised learning"
+experimental results
+gravitational
+numerical AND experiments AND demonstrate
+address AND issue
+performance state
+telescope
+"primordial magnetic fields"
+dark AND matter
+method AND multipliers AND admm
+"region parameter space"
+extensive AND experiments
+deep AND inelastic AND scattering
+functional theory
+state
+rm AND km
+covid fake
+van AND der
+real AND time
+"optimal control"
+reproducing AND kernel
+experimental
+rm AND km AND rm
+machine learning ml
+"term memory lstm"
+dark
+"orbital angular"
+NOT neural
+plays AND crucial
+graph AND convolutional AND network
+low AND energy AND effective
+"cyber physical systems"
+data driven
+deep
+star forming galaxies
+real AND world
+plays AND important
+NOT time
+experimental AND results AND real
+"financial time"
+"data driven approach"
+results AND demonstrate AND proposed
+"extensive experiments demonstrate"
+language
+"machine learning model"
+achieving AND state
+social AND media AND platforms
+relativistic AND heavy AND ion
+extensive AND experiments AND conducted
+show
+massive machine type
+cosmic AND microwave
+alternating AND direction
+show AND method
+"real world data"
+"real world networks"
+"future research directions"
+play AND crucial
+"log log log"
+proposed AND approach AND outperforms
+high dimensional
+attention AND recent
+lower upper bounds
+quantum AND anomalous
+"mock theta functions"
+transition AND metal
+star AND formation AND activity
+random AND matrix AND theory
+experimental results
+artificial
+"high resolution"
+NOT region
+deep
+standard AND model
+bethe AND salpeter
+systems
+news AND detection
+binary black
+"artificial neural"
+"proton proton collisions"
+transition AND metal AND dichalcogenides
+state
+machine AND learning
+low AND latency
+electron AND electron
+plays
+supervised
+learning
+"things iot devices"
+visual question answering
+state AND art
+demonstrate AND proposed AND method
+star
+machine
+reinforcement learning drl
+"ab initio calculations"
+interference noise
+NOT world
+real world
+star AND formation AND histories
+simulation results
+von AND neumann AND algebras
+multi AND agent
+machine AND learning AND deep
+wide AND range
+"extensive experiments"
+rashba AND spin
+neural AND networks
+finite AND element AND methods
+optimal control problems
+maximum AND likelihood
+"play important"
+quark gluon
+previous state
+"multiple input"
+nu
+state AND art AND techniques
+state AND art
+deep AND learning
+spin orbit
+neutrinoless double beta
+extensive experimental
+"proton proton"
+attracted AND considerable AND attention
+neural AND network
+channel AND state AND information
+signal interference noise
+approaches
+multi task learning
+anomalous hall effect
+bose AND einstein AND condensates
+mixed integer linear
+NOT model
+machine AND learning
+"news detection"
+model
+heavy AND ion AND collisions
+"monte carlo"
+prove existence
+NOT interaction
+NOT neural
+"large scale datasets"
+pre AND trained AND models
+metal
+traditional
+direction AND method
+order AND phase AND transition
+"large scale dataset"
+monte AND carlo AND mcmc
+mass loss
+deep AND learning
+NOT layer
+deep AND learning AND architectures
+graph neural networks
+range
+large hadron collider
+wide AND range
+yang AND mills AND theory
+optical coherence
+cloud
+"experiments benchmark"
+functional theory
+cosmic microwave background
+open AND source
+NOT mathbb
+neural machine
+light matter interaction
+upper AND lower AND bounds
+computer
+simulation results
+learning AND based AND approaches
+numerical results
+"conformal field theory"
+conducted
+channel AND state
+"microwave background cmb"
+deep AND learning
+ordinary AND differential
+quantum
+noise AND ratio AND snr
+"recurrent neural"
+"reconfigurable intelligent"
+"magnetic resonance"
+"graph representation learning"
+natural language processing
+bethe AND salpeter AND equation
+"show proposed algorithm"
+"numerical results"
+recurrent AND neural AND network
+chain AND monte
+"data driven approach"
+small
+scanning AND tunneling AND microscopy
+"pierre auger"
+recent
+artificial AND neural
+real AND world AND data
+method outperforms
+NOT sitter
+neural AND network AND model
+optical AND coherence
+machine learning techniques
+supervised machine learning
+real AND world AND networks
+convolutional neural
+light AND matter
+convolutional AND neural AND network
+"prove existence uniqueness"
+pre
+numerical
+"reconfigurable intelligent"
+"intermediate scale"
+"black hole binary"
+hyper AND suprime AND cam
+"pre trained models"
+machine learning algorithms
+demonstrate AND effectiveness
+signal AND interference AND noise
+mathbb AND times
+primordial AND black AND holes
+recognition
+"play significant"
+find AND good AND agreement
+primordial magnetic fields
+anomalous hall effect
+"optical coherence"
+direction AND method
+"inert doublet model"
+deep AND learning AND methods
+supervised learning method
+high AND resolution AND images
+fault AND tolerant AND quantum
+term memory
+"high dimensional data"
+multiple access
+light AND matter AND interaction
+deep AND learning AND framework
+"learning based"
+federated
+models
+"dark matter"
+"resolved photoemission"
+light matter interaction
+"publicly https github"
+NOT neural
+unsupervised domain adaptation
+graph neural network
+NOT charge
+reinforcement
+dark AND matter
+deep learning
+"synthetic real"
+proposed
+"riemann zeta function"
+edge
+NOT time
+moriya
+reinforcement AND learning AND drl
+"neural network architectures"
+signal interference noise
+"machine learning"
+schr odinger
+generative AND adversarial AND network
+molecular AND beam AND epitaxy
+neural network
+hom AND lie
+fold AND cross
+multi AND armed AND bandit
+omega AND subset
+multi AND class
+real world
+molecular AND dynamics
+low AND energy
+al phys
+"reduced order"
+small magellanic
+attracted AND considerable AND attention
+"extensive experiments show"
+orders magnitude
+orbit
+"star forming regions"
+"unmanned aerial vehicle"
+"real world problems"
+rl
+direction AND method
+electronic AND health AND records
+outperforms AND state
+low rank
+"play crucial"
+learning AND deep
+massive AND multiple AND input
+small magellanic cloud
+dynamic mode
+fold AND cross AND validation
+dynamic AND mode AND decomposition
+generative adversarial
+"point spread function"
+finite AND element
+uniform
+reinforcement learning drl
+navier stokes
+adversarial machine learning
+model
+decision AND making
+attention AND recent AND years
+machine AND learning AND deep
+machine learning models
+paper propose
+"von neumann"
+NOT world
+component AND analysis AND pca
+multiple AND input
+"multi agent systems"
+"existing state art"
+magnetic
+NOT gas
+"data driven"
+cross
+cyber physical
+"al phys rev"
+density AND functional AND theory
+"show proposed"
+rm km
+medical AND image AND segmentation
+extensive experiments
+"play key role"
+"simulation results"
+anomalous AND hall AND effect
+"extensive experimental"
+"state art deep"
+topological AND edge
+general AND relativity
+deep learning approach
+gravitational wave
+short term memory
+mock AND theta
+mpc
+play AND crucial AND role
+machine AND learning
+conduct AND extensive AND experiments
+"method multipliers admm"
+learning computer
+social
+long short
+"black hole mass"
+anti AND de
+data machine
+inelastic AND neutron
+transmission electron microscopy
+method AND multipliers
+reduced order
+"extensive experimental results"
+"spectral energy distribution"
+ct
+play AND important AND role
+neural networks
+"real world data"
+nlp
+"static spherically symmetric"
+NOT interactions
+multi AND armed AND bandit
+"alternating direction method"
+"extensive experiments real"
+fold AND cross AND validation
+"potential energy"
+double beta decay
+multiple
+achieved AND state
+code AND https AND github
+proposed
+visual question answering
+"plays important role"
+"play key"
+finite element methods
+source
+electronic AND health AND records
+tight
+dark AND matter
+satellite
+models
+black hole
+automatic AND speech AND recognition
+NOT domain
+carlo
+"deep reinforcement learning"
+"neural network architecture"
+"potential energy"
+waals
+"high resolution"
+state AND art
+simulation AND results AND demonstrate
+attention AND recent
+"supervised learning"
+demonstrate
+lambda AND cdm AND model
+numerical AND experiments AND demonstrate
+quantum AND key AND distribution
+extensive AND experimental
+"deep learning model"
+experiments benchmark
+agent AND reinforcement
+achieves AND state AND art
+base station
+results AND show
+generative adversarial networks
+bose AND einstein AND condensates
+deep
+hubble space telescope
+"point spread function"
+real world
+"long short"
+"mobile edge"
+"gamma ray bursts"
+central AND limit
+quantum monte
+large AND scale AND structure
+deep
+massive
+"show proposed"
+unmanned aerial
+github
+real world scenarios
+bethe AND salpeter AND equation
+medical
+quantum AND critical
+orders magnitude faster
+NOT fake
+pre AND trained
+condensed AND matter AND physics
+dynamic AND mode AND decomposition
+publicly AND https
+"deep neural networks"
+adversarial AND machine AND learning
+"quantum information processing"
+synthetic real world
+state art
+carlo
+recurrent AND neural AND networks
+demonstrate AND effectiveness
+"primordial magnetic"
+extensive AND experimental
+state AND art
+scale
+interference noise
+fuzzy AND dark
+supervised AND learning
+find AND good AND agreement
+"black hole"
+internet AND things
+"strong magnetic"
+"high dimensional data"
+closed form
+"convolutional neural network"
+plays
+maximum likelihood
+molecular AND beam AND epitaxy
+spacetime
+graph AND structured AND data
+propose
+NOT log
+agent AND reinforcement
+interference noise ratio
+control
+exoplanet AND survey
+predictive AND control AND mpc
+topological AND edge
+state
+model
+"energy momentum tensor"
+"periodic boundary"
+"generative adversarial network"
+inert AND doublet AND model
+NOT dichalcogenides
+"term memory"
+machine learning
+neural AND network AND based
+high resolution images
+general AND relativity AND gr
+fast radio
+information
+multi AND armed
+kullback leibler divergence
+short AND term AND memory
+state art methods
+neural
+random AND matrix AND theory
+state AND art
+speech
+state art performance
+propose
+"quantum rabi"
+scanning
+inert doublet model
+supernovae
+data AND machine AND learning
+extensive AND experiments
+"domain adaptation uda"
+principal AND component AND analysis
+machine AND learning
+multiple
+"spin hall"
+hyper suprime
+extensive AND experiments
+method AND multipliers AND admm
+machine AND learning AND models
+attracted considerable
+loop AND quantum
+graph AND structured
+NOT algorithm
+learning AND based AND approach
+pierre AND auger
+"propose data"
+learning
+"probability density function"
+natural AND language AND processing
+machine AND learning
+"state art"
+method AND outperforms AND state
+external AND magnetic
+matter
+multiple
+machine reading comprehension
+independent AND identically AND distributed
+semi
+unmanned aerial vehicles
+large AND hadron AND collider
+based
+ultra
+"neural networks cnn"
+large AND magellanic AND cloud
+survey AND satellite
+energy AND momentum
+"navier stokes"
+random matrix theory
+artificial
+millimeter AND wave AND mmwave
+"type ia"
+reconfigurable intelligent surface
+ultra reliable
+method
+deep
+lambda cdm
+numerical AND results
+news AND detection AND english
+short AND term
+phase
+strong magnetic
+riemann
+deep AND learning
+"conformal field"
+deep
+"method outperforms state"
+state AND art
+tensor
+bethe AND salpeter AND equation
+gamma AND ray
+"fuzzy dark"
+quantum monte carlo
+support vector machine
+medical AND image AND segmentation
+neural architecture
+"extensive experiments"
+deep AND learning
+magnetic AND field
+financial time
+reinforcement learning based
+low
+"data driven"
+coronal mass ejections
+integer linear
+human activity recognition
+loss
+black AND hole
+demonstrate AND proposed
+unmanned
+NOT fast
+particle AND swarm AND optimization
+orthogonal AND multiple AND access
+massive AND multiple
+"light matter"
+"partial differential equations"
+cloud
+effective AND field
+learning based
+existence
+multi AND armed
+extensive AND experiments
+learning AND based
+predictive AND control
+"standard model sm"
+"real world applications"
+input AND multiple AND output
+epitaxy
+"central limit theorem"
+plays AND important AND role
+deep AND reinforcement AND learning
+condensed AND matter
+effectiveness AND proposed AND method
+propose simple effective
+"al phys"
+trained AND language
+optimal control problems
+inelastic AND neutron
+momentum
+monte carlo simulation
+log AND log AND log
+extensive
+molecular AND dynamics
+bursts
+classification
+"machine learning"
+proposed AND approach
+double
+intermediate
+quantum AND information AND processing
+vector AND machine AND svm
+NOT model
+state AND art AND algorithms
+real AND world
+low
+unmanned aerial vehicles
+supermassive AND black
+named entity recognition
+black AND box
+state AND art AND models
+probability AND density
+"kullback leibler"
+named entity
+"star formation"
+black AND box
+"noisy intermediate scale"
+financial AND time AND series
+deep AND learning AND algorithms
+zeta
+multi AND agent AND systems
+learning AND based AND approach
+federated learning
+nonlinear AND schr AND odinger
+"massive multiple"
+"star formation rate"
+NOT network
+auger
+"transition metal dichalcogenides"
+cyber AND physical
+data
+variational AND autoencoder AND vae
+"massive multiple input"
+NOT graph
+spectral AND energy AND distribution
+"charge density"
+"named entity"
+swarm
+scale
+pre AND trained
+spin AND orbit
+gas AND phase AND metallicity
+black AND hole
+monte
+"upper lower"
+deep AND convolutional
+primordial black holes
+"neural network cnn"
+"gaussian process"
+agent AND reinforcement
+navier stokes
+"machine learning model"
+mixed AND integer AND linear
+play significant
+unmanned AND aerial AND vehicles
+achieved AND state
+"scanning tunneling"
+data AND machine AND learning
+performance state art
+finite AND element
+finite AND element
+NOT things
+pre trained
+noise ratio
+"computational fluid"
+finite element
+"achieving state"
+experiments
+"state art performance"
+open quantum
+domain AND adaptation AND uda
+yang mills theory
+"decision making process"
+"deep learning"
+machine learning
+unmanned AND aerial AND vehicle
+"markov decision"
+"frac frac frac"
+navier stokes equations
+uniform magnetic
+graph convolutional networks
+"resolved photoemission"
+simulations
+history
+region
+news AND detection
+art
+"natural language understanding"
+direction
+neural networks
+automatic AND speech
+"previous state"
+multi AND class
+extensive AND experiments AND demonstrate
+NOT methods
+"show method"
+black AND box
+demonstrate effectiveness proposed
+"magnetic field strength"
+"bose einstein"
+neural network architecture
+"angle resolved photoemission"
+machine AND learning
+neural AND network
+based reinforcement
+star
+large scale
+reduced order models
+url AND https AND github
+surface
+automatic speech
+news detection
+inelastic AND neutron
+achieve AND state
+"bethe salpeter equation"
+future AND research
+"massive multiple input"
+machine AND learning AND deep
+transiting
+NOT making
+role
+rashba AND spin
+"data driven"
+previous AND state AND art
+NOT chain
+polynomial AND time
+"primordial black"
+neural AND network AND models
+"neural networks cnns"
+electronic AND health AND records
+based AND deep
+pb AND pb
+mathcal mathcal mathcal
+light matter interactions
+network
+fold AND cross
+show proposed
+bursts
+plays AND important
+results AND demonstrate
+"experimental results show"
+machine type
+von neumann algebras
+lower AND upper AND bounds
+things iot devices
+chain AND monte AND carlo
+vector machine svm
+machine AND learning
+tensor AND scalar AND ratio
+neural AND networks

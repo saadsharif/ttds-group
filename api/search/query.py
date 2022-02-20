@@ -25,7 +25,8 @@ class Query:
         # this builds the grammar to parse expressions using pyparser - we support booleans, quotes, proximity
         # + parenthesis (TBC)
         or_operator = Forward()
-        term_operator = Group(Word(alphanums)).setResultsName('term')
+        # we use : for a field delimiter and _ to concat terms e.g. bigrams
+        term_operator = Group(Word(alphanums + "_:")).setResultsName('term')
 
         phrases_containable = Forward()
         phrases_containable << ((term_operator + phrases_containable) | term_operator)
@@ -114,9 +115,9 @@ class Query:
         return intersection
 
     def _evaluate_natural(self, components, condition, score=True):
-        start = time.time()
-        query_vector = self._index.get_vector(" ".join([" ".join(component) for component in components]))
-        print(f"{time.time() - start}s for vector query generation")
+        # start = time.time()
+        # query_vector = self._index.get_vector(" ".join([" ".join(component) for component in components]))
+        # print(f"{time.time() - start}s for vector query generation")
         # TODO: Replace this with HNSW vector scoring
         return self._evaluate_or(components, condition, score=True)
 
@@ -238,7 +239,10 @@ class Query:
     def _evaluate_term(self, components, condition, score):
         # score the docs
         scored_postings = []
-        term = self._index.analyzer.process_token(components[0])
+        term = components[0]
+        if ":" not in term:
+            # : indicates a special lookup on a protected term
+            term = self._index.analyzer.process_token(term)
         if term is None:
             # we have a stop word - a special case - we use a doc id of 0 (this should never exist)
             return [Posting(0, stop_word=True)]
