@@ -13,6 +13,7 @@ parser.add_argument("-p", "--port", help="port", default=5000, type=int)
 args = parser.parse_args()
 
 times = []
+total_hits = []
 with open(args.file, "r") as query_file:
     for query in query_file:
         query = query.strip()
@@ -28,13 +29,20 @@ with open(args.file, "r") as query_file:
         hits = response.json()
         if hits["total_hits"] == 0:
             print(f"WARNING: Zero hits for {query}")
+        total_hits.append(hits["total_hits"])
         elapsed = response.elapsed.total_seconds()
         times.append(elapsed)
         print(f"{query} took {elapsed}s with {hits['total_hits']} hits")
 
 print("----------------STATISTICS----------------")
+print(f"Max: {max(times)}")
+print(f"Min: {min(times)}")
 print(f"Median: {statistics.median(times)}")
 print(f"Mean: {statistics.mean(times)}")
 print(f"Harmonic Mean: {statistics.harmonic_mean(times)}")
 print(f"95% Percentile: {np.percentile(times, 95)}")
 print(f"99% Percentile: {np.percentile(times, 99)}")
+print(f"Mean Hits: {statistics.mean(total_hits)}")
+print(f"Std. dev Hits: {statistics.stdev(total_hits)}")
+print(f"Max Hits: {max(total_hits)}")
+print(f"Min Hits: {min(total_hits)}")
