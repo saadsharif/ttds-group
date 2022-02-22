@@ -1,7 +1,7 @@
 import argparse
-import json
 import statistics
 import sys
+from operator import itemgetter
 
 import numpy as np
 import requests
@@ -10,13 +10,16 @@ parser = argparse.ArgumentParser(description="Extract author")
 parser.add_argument("-f", "--file", help="query file", required=False, default="queries.txt")
 parser.add_argument("-a", "--host", help="host", default="localhost")
 parser.add_argument("-p", "--port", help="port", default=5000, type=int)
+parser.add_argument("-o", "--output", help="output file", required=False, default="hits.txt")
+parser.add_argument("-s", "--slowest", help="top N slowest queries", default=10, type=int)
 args = parser.parse_args()
-
+query_times = []
 times = []
 total_hits = []
-with open(args.file, "r") as query_file:
-    for query in query_file:
-        query = query.strip()
+with open(args.file, "r") as query_file, open(args.output, "w") as output_file:
+    for line in query_file:
+        query_parts = line.strip().split(",")
+        query = query_parts[0]
         response = requests.post(f"http://{args.host}:{args.port}/search", json={
             "query": f"{query}",
             "offset": 0,
@@ -24,15 +27,20 @@ with open(args.file, "r") as query_file:
             "fields": ["title"]
         }, timeout=3600)
         if response.status_code != 200:
-            print(f"PANIC: {query} caused {response.status_code}")
+            print(f"PANIC: {query} - caused {response.status_code}")
             sys.exit(1)
         hits = response.json()
+        if len(query_parts) == 2 and int(query_parts[1]) != hits["total_hits"]:
+            print(f"PANIC: {query} - expected {query_parts[1]} hits but got {hits['total_hits']}")
+            sys.exit(1)
         if hits["total_hits"] == 0:
             print(f"WARNING: Zero hits for {query}")
         total_hits.append(hits["total_hits"])
         elapsed = response.elapsed.total_seconds()
         times.append(elapsed)
-        print(f"{query} took {elapsed}s with {hits['total_hits']} hits")
+        query_times.append((query, elapsed))
+        output_file.write(f"{query},{hits['total_hits']}\n")
+        print(f"{query} - took {elapsed}s with {hits['total_hits']} hits")
 
 print("----------------STATISTICS----------------")
 print(f"Max: {max(times)}")
@@ -46,3 +54,7 @@ print(f"Mean Hits: {statistics.mean(total_hits)}")
 print(f"Std. dev Hits: {statistics.stdev(total_hits)}")
 print(f"Max Hits: {max(total_hits)}")
 print(f"Min Hits: {min(total_hits)}")
+print(f"----------------TOP {args.slowest} QUERIES----------------")
+query_times = sorted(query_times, key=itemgetter(1), reverse=True)[:args.slowest]
+for query, time in query_times:
+    print(f"{query}: {time}")

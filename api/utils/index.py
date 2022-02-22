@@ -7,6 +7,8 @@ import time
 import requests
 
 # Initialize parser
+from optimize import optimize
+
 parser = argparse.ArgumentParser(description="Indexing script")
 parser.add_argument("-f", "--file", help="ndjson file", required=True)
 parser.add_argument("-a", "--host", help="host", default="localhost")
@@ -14,6 +16,7 @@ parser.add_argument("-p", "--port", help="port", default=5000, type=int)
 parser.add_argument("-b", "--batch_size", help="batch size", default=100, type=int)
 parser.add_argument("-m", "--max_docs", help="max docs. -1 is unlimited.", default=100000, type=int)
 parser.add_argument("-c", "--is_compressed", help="compressed gz file", action='store_true')
+parser.add_argument("-o", "--optimize", help="optimize to 1 segment on completion", action='store_true')
 args = parser.parse_args()
 
 
@@ -84,5 +87,7 @@ if args.file:
     response = requests.post(f"http://{args.host}:{args.port}/flush", timeout=3600)
     if response.status_code == 200:
         print("OK")
+        if args.optimize:
+            optimize(args.host, args.port, 1)
     else:
         print(f"Flush failed with {response.status_code}")
