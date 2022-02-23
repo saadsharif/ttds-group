@@ -1,6 +1,7 @@
 import ujson as json
 from heapq import merge
 
+
 class ScoredPosting:
     def __init__(self, posting, score=0):
         self._posting = posting
@@ -96,8 +97,8 @@ class TermPosting:
     def add_term_info(self, term_posting):
         if term_posting:
             self._collection_frequency += term_posting.collection_frequency
-            # this should be in order for future merges
-            self.postings = list(merge(self.postings, term_posting.postings, key=lambda posting: posting.doc_id))
+            # this should be in order for future merges self.postings.append(term_posting.postings)
+            self.postings = self.postings + term_posting.postings
 
     def __iter__(self):
         return iter(self.postings)

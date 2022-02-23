@@ -234,15 +234,15 @@ class Index:
         # get all the matching docs in all the segments - currently we assume the term is in every segment
         # this should be improved e.g. using a bloom filter or some bit set, inside the segment though -i.e.
         # it should return [] quickly
-        term_posting = TermPosting()
+        combined_posting = TermPosting()
         self._segment_update_lock.acquire_read()
         if term:
             for segment in self._segments:
-                termPosting = segment.get_term(term)
-                if termPosting:
-                    term_posting.add_term_info(termPosting)
+                term_posting = segment.get_term(term)
+                if term_posting:
+                    combined_posting.add_term_info(term_posting)
         self._segment_update_lock.release_read()
-        return term_posting
+        return combined_posting
 
     def get_vector(self, query):
         return self._vector_model.embedding(query)
