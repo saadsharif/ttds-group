@@ -1,10 +1,12 @@
+from functools import total_ordering
+
 import ujson as json
-from heapq import merge
 
 
+@total_ordering
 class ScoredPosting:
     def __init__(self, posting, score=0):
-        self._posting = posting
+        self.posting = posting
         self._score = score
 
     @property
@@ -13,16 +15,23 @@ class ScoredPosting:
 
     @property
     def doc_id(self):
-        return self._posting.doc_id
+        return self.posting.doc_id
 
     def __iter__(self):
-        return iter(self._posting)
+        return iter(self.posting)
 
     @property
     def is_stop_word(self):
         return False
 
+    def __eq__(self, other):
+        return self.posting.doc_id == other.posting.doc_id
 
+    def __lt__(self, other):
+        return self.posting.doc_id < other.posting.doc_id
+
+
+@total_ordering
 class Posting:
     def __init__(self, doc_id, stop_word=False):
         self.positions = []
@@ -36,6 +45,10 @@ class Posting:
     @property
     def doc_id(self):
         return self._doc_id
+
+    @property
+    def posting(self):
+        return self
 
     @property
     def score(self):
@@ -63,6 +76,12 @@ class Posting:
         posting = Posting(data["id"])
         posting.positions = data["pos"]
         return posting
+
+    def __eq__(self, other):
+        return self.doc_id == other.doc_id
+
+    def __lt__(self, other):
+        return self.doc_id < other.doc_id
 
 
 # encapsulates all the information about a term

@@ -1,6 +1,5 @@
 import heapq
 import math
-import time
 from operator import itemgetter
 
 from pyparsing import (
@@ -130,41 +129,30 @@ class Query:
             list.append(item)
             item = next(iter, None)
 
-    def _evaluate_or(self, components, condition, score=False):
-        union = []
-        left_side_postings = iter(self.evaluate(components[0], score=score))
-        right_side_postings = iter(self.evaluate(components[1], score=score))
-        left_posting = next(left_side_postings, None)
-        right_posting = next(right_side_postings, None)
-        if left_posting and left_posting.is_stop_word:
-            left_posting = None
-        if right_posting and right_posting.is_stop_word:
-            right_posting = None
-
-        while left_posting and right_posting:
-            if left_posting.doc_id < right_posting.doc_id:
-                union.append(left_posting)
-                left_posting = next(left_side_postings, None)
-            elif left_posting.doc_id > right_posting.doc_id:
-                union.append(right_posting)
-                right_posting = next(right_side_postings, None)
+    @staticmethod
+    def _posting_merge(left, right):
+        last = None
+        for posting in heapq.merge(left, right):
+            if last is None:
+                last = posting
+            elif posting != last:
+                yield last
+                last = posting
             else:
-                # doesnt matter which postings we take - although we inherently drop one set of positions, from one
-                # side these are only used for phrases currently
-                if score:
-                    # sum scores from both clauses e.g. terms
-                    union.append(ScoredPosting(left_posting, left_posting.score + right_posting.score))
-                else:
-                    union.append(left_posting)
-                right_posting = next(right_side_postings, None)
-                left_posting = next(left_side_postings, None)
-        if right_posting:
-            union.append(right_posting)
-            self._extend(union, right_side_postings)
-        elif left_posting:
-            union.append(left_posting)
-            self._extend(union, left_side_postings)
-        return union
+                yield ScoredPosting(posting, posting.score + last.score)
+                last = None
+        if last is not None:
+            yield last
+
+    def _evaluate_or(self, components, condition, score=False):
+        left_postings = self.evaluate(components[0], score=score)
+        right_postings = self.evaluate(components[1], score=score)
+        if len(left_postings) == 1 and left_postings[0].is_stop_word:
+            left_postings = []
+        if len(right_postings) == 1 and right_postings[0].is_stop_word:
+            right_postings = []
+        return list(
+            self._posting_merge(left_postings, right_postings))
 
     def _evaluate_not(self, components, condition, score):
         not_docs = []
@@ -275,10 +263,10 @@ class Query:
     def execute(self, query, score, max_results, offset, facets):
         parsed = self._parser(query)
         docs = self.evaluate(parsed[0], score=score)
+        facet_values = {}
         if len(docs) == 1 and docs[0].doc_id == 0:
             # a doc based on a stop word search
-            return [], 0
-        facet_values = {}
+            return [], facet_values, 0
         if len(facets) > 0:
             facet_values = self._get_facets(facets, docs)
         # we would add pagination here

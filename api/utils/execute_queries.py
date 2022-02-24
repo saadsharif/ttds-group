@@ -33,7 +33,8 @@ with open(args.file, "r") as query_file, open(args.output, "w") as output_file:
         if len(query_parts) == 2 and int(query_parts[1]) != hits["total_hits"]:
             print(f"PANIC: {query} - expected {query_parts[1]} hits but got {hits['total_hits']}")
             sys.exit(1)
-        if hits["total_hits"] == 0:
+        if len(query_parts) != 2 and hits["total_hits"] == 0:
+            # only warn if we don't have an explicit hit count of 0
             print(f"WARNING: Zero hits for {query}")
         total_hits.append(hits["total_hits"])
         elapsed = response.elapsed.total_seconds()

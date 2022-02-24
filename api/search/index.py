@@ -228,7 +228,7 @@ class Index:
                     doc in
                     docs], facets, total
         except Exception as e:
-            raise SearchException(f"Unexpected exception during indexing - {e}")
+            raise SearchException(f"Unexpected exception during querying - {e}")
 
     def get_term(self, term):
         # get all the matching docs in all the segments - currently we assume the term is in every segment
