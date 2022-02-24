@@ -12,8 +12,7 @@ export default class SearchAPI {
   }
     
   onSearch(state, queryConfig) {
-    // console.log(state, queryConfig);
-    const { resultsPerPage } = state;
+    const { current: currentPage, resultsPerPage } = state;
     const toObjectWithRaw = value => ({ raw: value })
     const addEachKeyValueToObject = (acc, [key, value]) => ({
       ...acc,
@@ -23,6 +22,7 @@ export default class SearchAPI {
     return axios.post(endpoint, {
       'query': state.searchTerm,
       'max_results': resultsPerPage,
+      'offset': (currentPage - 1) * resultsPerPage,
       'fields': ['abstract', 'authors', 'subject', 'title']
     }).then(response =>
       response.data
@@ -33,9 +33,10 @@ export default class SearchAPI {
         ),
         totalResults: results.total_hits,
         facets: [],
-        requestId: results.request_id
+        requestId: results.request_id,
+        totalPages: Math.ceil(results.total_hits / resultsPerPage),
       })
-    ) 
+    )
   }
 
   async onAutocomplete({ searchTerm }, queryConfig) {};

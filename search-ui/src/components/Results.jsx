@@ -5,6 +5,8 @@ import ReactReadMoreReadLess from "react-read-more-read-less";
 
 const StyledResults = styled.div`
   padding: 32px;
+  max-width: 750px;
+  margin-right: 64px;
 `;
 
 const StyledResult = styled.div`
@@ -52,10 +54,19 @@ const Result = ({ result }) => {
   );
 };
 
-const StyledPaging = styled.div`
+const Paging = styled(NativePaging)`
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+
+  .rc-pagination-item a {
+    color: #555;
+  }
+
+  .rc-pagination-item-active a {
+    color: #000;
+    font-weight: bold;
+  }
 `;
 
 const Pagination = styled.div`
@@ -64,23 +75,16 @@ const Pagination = styled.div`
   justify-content: space-between;
 `;
 
-const Paging = (props) => {
-  console.log(props);
-  return(
-    <StyledPaging>HeyHey</StyledPaging>
-  );
-};
-
 const Results = () => {
   return (
     <StyledResults>
-      <NativePaging view={Paging} />
+      <Paging />
       <Pagination>
         <PagingInfo />
         <ResultsPerPage options={[5, 10, 20, 50, 100]} />
       </Pagination>
-      <NativeResults resultView={Result} titleField='title' urlField='url'  />
-      <NativePaging view={Paging} />
+      <NativeResults resultView={Result} />
+      <Paging />
     </StyledResults>
   );
 }

@@ -6,6 +6,7 @@ const StyledSideBar = styled.div`
   width: 30%;
   min-width: 200px;
   padding: 32px;
+  margin-right: 64px;
 `;
 
 const StyledGroup = styled.div`

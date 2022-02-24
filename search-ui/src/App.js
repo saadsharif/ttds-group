@@ -13,6 +13,7 @@ import Results from './components/Results';
 
 const Body = styled.div`
   display: flex;
+  justify-content: center;
 `;
 
 const connector = new SearchAPI();
