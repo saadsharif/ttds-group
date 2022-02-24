@@ -11,17 +11,26 @@ import SearchBar from './components/SearchBar';
 import SideBar from './components/SideBar';
 import Results from './components/Results';
 
+const connector = new SearchAPI();
+
+const configurationOptions = {
+  apiConnector: connector,
+  initialState: {
+    searchTerm: "test",
+    resultsPerPage: 10,
+  },
+  alwaysSearchOnInitialLoad: true,
+};
+
 const Body = styled.div`
   display: flex;
   justify-content: center;
 `;
 
-const connector = new SearchAPI();
-
 const App = () => {
   return (
     <div className='App'>
-      <SearchProvider config={{ apiConnector: connector }}>
+      <SearchProvider config={configurationOptions}>
         <ErrorBoundary>
           <SearchBar />
           <Body>
