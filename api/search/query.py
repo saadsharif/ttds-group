@@ -21,6 +21,8 @@ class Query:
 
     def __init__(self, index):
         self._index = index
+        # false indicates positions will not be loaded answering queries - set to true if a phrase or proximity query is used
+        self._with_positions = False
         # this builds the grammar to parse expressions using pyparser - we support booleans, quotes, proximity
         # + parenthesis (TBC)
         or_operator = Forward()
@@ -191,9 +193,12 @@ class Query:
 
     def _evaluate_phrases(self, components, condition, score):
         # first we perform an AND by re-writing the query
+        self._with_positions = True
         and_query = self._parser(' AND '.join([component[0] for component in components]))
         # additional condition through lambda _phrase_match on verification step of and performs the phrase check
-        return self.evaluate(and_query[0], condition=self._phrase_match, score=score)
+        phrase_response = self.evaluate(and_query[0], condition=self._phrase_match, score=score)
+        self._with_positions = False
+        return phrase_response
 
     def _proximity_match(self, left, right, distance):
         left_side = iter(left)
@@ -217,12 +222,16 @@ class Query:
             return False
 
     def _evaluate_proximity(self, components, condition, score):
+        self._with_positions = True
         distance = components[0]
         # first we perform an AND by re-writing the query
         and_query = self._parser(' AND '.join([component[0] for component in components[1:]]))
         # additional condition through lambda _phrase_match on verification step of and performs the phrase check
         check_proximity = lambda left, right: self._proximity_match(left, right, int(distance))
-        return self.evaluate(and_query[0], condition=check_proximity, score=score)
+        proximity_response = self.evaluate(and_query[0], condition=check_proximity, score=score)
+        self._with_positions = False
+        return proximity_response
+
 
     def _evaluate_term(self, components, condition, score):
         # score the docs
@@ -234,7 +243,7 @@ class Query:
         if term is None:
             # we have a stop word - a special case - we use a doc id of 0 (this should never exist)
             return [Posting(0, stop_word=True)]
-        term_postings = self._index.get_term(term)
+        term_postings = self._index.get_term(term, with_positions=self._with_positions)
         if not score:
             return term_postings
 
