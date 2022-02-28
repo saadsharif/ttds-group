@@ -37,6 +37,7 @@ class Posting:
         self.positions = []
         self._doc_id = doc_id
         self._stop_word = stop_word
+        self.frequency = 0
 
     @property
     def is_stop_word(self):
@@ -55,26 +56,28 @@ class Posting:
         # this saves us creating a scored posting for when we dont need one
         return 0
 
-    @property
-    def frequency(self):
-        return len(self.positions)
-
     def add_position(self, position):
         self.positions.append(position)
+        self.frequency += 1
 
     def __iter__(self):
         return iter(self.positions)
 
-    def to_store_format(self):
-        return {
-            "id": self._doc_id,
-            "pos": self.positions
+    def to_store_format(self, with_positions):
+        doc = {
+            "i": self._doc_id,
+            "f": self.frequency
         }
+        if with_positions:
+            doc["p"] = self.positions if with_positions else []
+        return doc
 
     @staticmethod
-    def from_store_format(data):
-        posting = Posting(data["id"])
-        posting.positions = data["pos"]
+    def from_store_format(data, with_positions):
+        posting = Posting(data["i"])
+        if with_positions:
+            posting.positions = data["p"]
+        posting.frequency = data["f"]
         return posting
 
     def __eq__(self, other):
@@ -124,15 +127,16 @@ class TermPosting:
 
     # TODO: These could be significantly improved. They determine how are postings are stored on disk -
     #  currently json encoded (cpu ands space wasteful)
-    def to_store_format(self):
+    def to_store_format(self, with_positions=True):
         return json.dumps({
             "cf": self._collection_frequency,
-            "p": [posting.to_store_format() for posting in self.postings]
+            "p": [posting.to_store_format(with_positions) for posting in self.postings]
         })
 
     @staticmethod
-    def from_store_format(data):
+    def from_store_format(data, with_positions=True):
         value = json.loads(data)
         termPosting = TermPosting(value["cf"])
-        termPosting.postings = [Posting.from_store_format(posting) for posting in value["p"]]
+        termPosting.postings = [Posting.from_store_format(posting, with_positions=with_positions) for posting in
+                                value["p"]]
         return termPosting

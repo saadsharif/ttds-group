@@ -23,8 +23,10 @@ class Segment:
         # this index persists the postings on disk to save disk - note that segments are immutable
         # the keys to this dict are the terms, the values offsets
         self._segment_id = segment_id
-        self._posting_file = os.path.join(storage_path, f"{self._segment_id}.pos")
-        self._index = Store(self._posting_file)
+        self._postings_file = os.path.join(storage_path, f"{self._segment_id}.pot")
+        self._postings_index = Store(self._postings_file)
+        self._positions_file = os.path.join(storage_path, f"{self._segment_id}.pos")
+        self._positions_index = Store(self._positions_file)
         self._buffer = {}
         self._is_flushed = False
         self._max_docs = max_docs
@@ -98,7 +100,8 @@ class Segment:
             return json.loads(self._doc_values[field][doc_id])
         return None
 
-    def get_term(self, term):
+    # if with_positions is False we can use the postings file which is a smaller read
+    def get_term(self, term, with_positions=True):
         # use the buffer if this is an in memory segment
         # can't read whilst flushing the buffer - maybe not needed - prevents empty results basically
         self._flush_lock.acquire_read()
@@ -111,8 +114,13 @@ class Segment:
         # don't need the read lock on an immutable segment
         self._flush_lock.release_read()
         # use the disk postings if this has been flushed
-        if term in self._index:
-            return TermPosting.from_store_format(self._index[term])
+        if with_positions:
+            if term in self._positions_index:
+                return TermPosting.from_store_format(self._positions_index[term])
+        else:
+            # this is a cheaper read as postings only
+            if term in self._postings_index:
+                return TermPosting.from_store_format(self._postings_index[term], with_positions=False)
 
     # flushed the buffer to disk - this can be called manually and "closes" the segment to additions making it immutable
     def flush(self):
@@ -123,7 +131,8 @@ class Segment:
             print(f"Flushing segment {self._segment_id}")
             # flush the term buffer in sorted term order
             for term in sorted(self._buffer):
-                self._index[term] = self._buffer[term].to_store_format()
+                self._positions_index[term] = self._buffer[term].to_store_format()
+                self._postings_index[term] = self._buffer[term].to_store_format(with_positions=False)
             # this flush is just to prevent queries from reading an empty buffer - might not be needed. Note we do this
             # only for the period of clearing the buffer - not during flushing - very short period
             self._flush_lock.acquire_write()
@@ -133,7 +142,8 @@ class Segment:
             self._flush_lock.release_write()
             self._indexing_lock.release_write()
             # if this happens bad things have happened, reset our files
-            self._index.clear()
+            self._positions_index.clear()
+            self._postings_index.clear()
             for field in self._doc_values.keys():
                 self._doc_values[field].clear()
             raise e
@@ -147,11 +157,11 @@ class Segment:
     def __getstate__(self):
         """Return state values to be pickled. Just a state file."""
         # note we ignore the heavy stuff here e.g. the buffer and index
-        return self._segment_id, self._posting_file, self._is_flushed, self._max_docs, self._max_doc_id, self._min_doc_id, self._doc_value_fields
+        return self._segment_id, self._positions_file, self._postings_file, self._is_flushed, self._max_docs, self._max_doc_id, self._min_doc_id, self._doc_value_fields
 
     def __setstate__(self, state):
         """Restore state from the unpickled state values."""
-        self._segment_id, self._posting_file, self._is_flushed, self._max_docs, self._max_doc_id, self._min_doc_id, self._doc_value_fields = state
+        self._segment_id, self._positions_file, self._postings_file, self._is_flushed, self._max_docs, self._max_doc_id, self._min_doc_id, self._doc_value_fields = state
         print(f"Loading segment {self._segment_id}")
         self._buffer = {}
         # if we're unpickling we're loading - unknown state potentially, close the segment
@@ -159,8 +169,12 @@ class Segment:
         self._flush_lock = ReadWriteLock()
         self._indexing_lock = ReadWriteLock()
         # this will load the index off disk
-        print(f"Loading index segment {self._segment_id} from {self._posting_file}...")
-        self._index = Store(self._posting_file)
+        print(f"Loading index postings for segment {self._segment_id} from {self._postings_file}...", end="", flush=True)
+        self._postings_index = Store(self._postings_file)
+        print("OK")
+        print(f"Loading index positions for segment {self._segment_id} from {self._positions_file}...", end="", flush=True)
+        print("OK")
+        self._positions_index = Store(self._positions_file)
         print(f"Index loaded for {self._segment_id}")
         # load the doc values
         self._doc_values = {}
@@ -170,33 +184,21 @@ class Segment:
             print(f"Field {field} loaded for segment {self._segment_id}")
         print(f"Segment {self._segment_id} loaded")
 
-    def __iter__(self):
-        return iter(self.items())
-
-    def __len__(self):
-        return len(self.keys())
-
-    def keys(self):
-        self._flush_lock.acquire_read()
+    def positions_items(self):
         if not self.is_flushed():
-            keys = list(self._buffer.keys())
-            self._flush_lock.release_read()
-            return keys
-        # don't need a read lock on immutable store
-        self._flush_lock.release_read()
-        return self._index.keys()
+            # this would require unacceptable locking and likely not easily thread safe
+            raise NotImplemented("Can't iterate positions on non flushed segment")
+        # don't need a read lock on immutable store - it cant be changed
+        for term, posting in self._positions_index.items():
+            yield term, TermPosting.from_store_format(posting)
 
-    def items(self):
-        self._flush_lock.acquire_read()
+    def postings_items(self):
         if not self.is_flushed():
-            # this isn't really thread safe
-            yield from self._buffer.items()
-            self._flush_lock.release_read()
-        else:
-            # don't need a read lock on immutable store - it cant be changed
-            self._flush_lock.release_read()
-            for term, posting in self._index.items():
-                yield term, TermPosting.from_store_format(posting)
+            # this would require unacceptable locking and likely not easily thread safe
+            raise NotImplemented("Can't iterate postings on non flushed segment")
+        # don't need a read lock on immutable store - it cant be changed
+        for term, posting in self._postings_index.items():
+            yield term, TermPosting.from_store_format(posting, with_positions=False)
 
     def doc_value_items(self):
         for field, doc_values in self._doc_values.items():
@@ -205,7 +207,7 @@ class Segment:
 
     # this closes the segment on shutdown
     def close(self):
-        self._index.close()
+        self._positions_index.close()
         for doc_values in self._doc_values.values():
             doc_values.close()
 
@@ -221,6 +223,7 @@ class Segment:
         self._min_doc_id = min(min_id_l, min_id_r)
         self._max_doc_id = max(max_id_l, max_id_r)
         self._merge_postings(l_segment, r_segment)
+        self._merge_positions(l_segment, r_segment)
         self._merge_doc_ids(l_segment, r_segment)
 
     def _merge_doc_ids(self, l_segment, r_segment):
@@ -235,42 +238,73 @@ class Segment:
         print(f"Doc ids merged")
 
     # merge the postings together - note we skip the buffer as it is faster (given no seeking required)
-    def _merge_postings(self, l_segment, r_segment):
-        print(f"Merging terms into {self._segment_id}...")
+    def _merge_positions(self, l_segment, r_segment):
+        print(f"Merging positions into {self._segment_id}...")
         # we know the terms will be in sorted order so we can linear merge these to avoid lots of seeking
-        l_iter = iter(l_segment)
-        r_iter = iter(r_segment)
+        l_iter = iter(l_segment.positions_items())
+        r_iter = iter(r_segment.positions_items())
         left_term, left_posting = next(l_iter, (None, None))
         right_term, right_posting = next(r_iter, (None, None))
         while left_term and right_term:
             if left_term < right_term:
-                self._index[left_term] = left_posting.to_store_format()
+                self._positions_index[left_term] = left_posting.to_store_format()
                 left_term, left_posting = next(l_iter, (None, None))
             elif left_term > right_term:
-                self._index[right_term] = right_posting.to_store_format()
+                self._positions_index[right_term] = right_posting.to_store_format()
                 right_term, right_posting = next(r_iter, (None, None))
             else:
                 left_posting.add_term_info(right_posting)
-                self._index[left_term] = left_posting.to_store_format()
+                self._positions_index[left_term] = left_posting.to_store_format()
                 left_term, left_posting = next(l_iter, (None, None))
                 right_term, right_posting = next(r_iter, (None, None))
         if left_term:
-            self._index[left_term] = left_posting.to_store_format()
+            self._positions_index[left_term] = left_posting.to_store_format()
             for left_term, left_posting in l_iter:
-                self._index[left_term] = left_posting.to_store_format()
+                self._positions_index[left_term] = left_posting.to_store_format()
         if right_term:
-            self._index[right_term] = right_posting.to_store_format()
+            self._positions_index[right_term] = right_posting.to_store_format()
             for right_term, right_posting in r_iter:
-                self._index[right_term] = right_posting.to_store_format()
-        print(f"Terms merged")
+                self._positions_index[right_term] = right_posting.to_store_format()
+        print(f"Positions merged")
+
+    def _merge_postings(self, l_segment, r_segment):
+        print(f"Merging postings into {self._segment_id}...")
+        # we know the terms will be in sorted order so we can linear merge these to avoid lots of seeking
+        l_iter = iter(l_segment.postings_items())
+        r_iter = iter(r_segment.postings_items())
+        left_term, left_posting = next(l_iter, (None, None))
+        right_term, right_posting = next(r_iter, (None, None))
+        while left_term and right_term:
+            if left_term < right_term:
+                self._postings_index[left_term] = left_posting.to_store_format(with_positions=False)
+                left_term, left_posting = next(l_iter, (None, None))
+            elif left_term > right_term:
+                self._postings_index[right_term] = right_posting.to_store_format(with_positions=False)
+                right_term, right_posting = next(r_iter, (None, None))
+            else:
+                left_posting.add_term_info(right_posting)
+                self._postings_index[left_term] = left_posting.to_store_format(with_positions=False)
+                left_term, left_posting = next(l_iter, (None, None))
+                right_term, right_posting = next(r_iter, (None, None))
+        if left_term:
+            self._postings_index[left_term] = left_posting.to_store_format(with_positions=False)
+            for left_term, left_posting in l_iter:
+                self._postings_index[left_term] = left_posting.to_store_format(with_positions=False)
+        if right_term:
+            self._postings_index[right_term] = right_posting.to_store_format(with_positions=False)
+            for right_term, right_posting in r_iter:
+                self._postings_index[right_term] = right_posting.to_store_format(with_positions=False)
+        print(f"Postings merged")
 
     def get_doc_id_range(self):
         return self._min_doc_id, self._max_doc_id
 
     def delete(self):
         self.close()
-        if os.path.exists(self._posting_file):
-            os.remove(self._posting_file)
+        if os.path.exists(self._positions_file):
+            os.remove(self._positions_file)
+        if os.path.exists(self._postings_file):
+            os.remove(self._postings_file)
         for path in self._doc_value_fields.values():
             if os.path.exists(path):
                 os.remove(path)
