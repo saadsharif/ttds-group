@@ -32,8 +32,12 @@ class ScoredPosting:
         return self.posting.doc_id < other.posting.doc_id
 
 
+MIN_LENGTH_FOR_SKIP_LIST = 3
+
+
 @total_ordering
 class Posting:
+
     def __init__(self, doc_id, stop_word=False):
         self.positions = []
         self.skips = []
@@ -67,6 +71,9 @@ class Posting:
 
     def _generate_skips(self):
         skips = []
+        if len(self.positions) <= MIN_LENGTH_FOR_SKIP_LIST:
+            # don't bother on skips on short lists
+            return []
         skip_count = math.floor(math.sqrt(len(self.positions)))
         if skip_count > 0:
             pos_index = 0
@@ -87,7 +94,9 @@ class Posting:
         }
         if with_positions:
             doc["p"] = self.positions
-            doc["s"] = self._generate_skips()
+            skips = self._generate_skips()
+            if len(skips) > 0:
+                doc["s"] = skips
         return doc
 
     @staticmethod
@@ -95,7 +104,7 @@ class Posting:
         posting = Posting(data["i"])
         if with_positions:
             posting.positions = data["p"]
-            posting.skips = data["s"]
+            posting.skips = data["s"] if "s" in data else []
         posting.frequency = data["f"]
         return posting
 
