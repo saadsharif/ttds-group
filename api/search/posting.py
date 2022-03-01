@@ -1,3 +1,4 @@
+import math
 from functools import total_ordering
 
 import ujson as json
@@ -35,6 +36,7 @@ class ScoredPosting:
 class Posting:
     def __init__(self, doc_id, stop_word=False):
         self.positions = []
+        self.skips = []
         self._doc_id = doc_id
         self._stop_word = stop_word
         self.frequency = 0
@@ -63,13 +65,29 @@ class Posting:
     def __iter__(self):
         return iter(self.positions)
 
+    def _generate_skips(self):
+        skips = []
+        skip_count = math.floor(math.sqrt(len(self.positions)))
+        if skip_count > 0:
+            pos_index = 0
+            skip_period = math.floor(len(self.positions) / skip_count)
+            # -1 because of list indexing starts with 0
+            skip_index = skip_period - 1
+            while pos_index < len(self.positions):
+                if pos_index == skip_index:
+                    skips.append([self.positions[pos_index], skip_index])
+                    skip_index += skip_period
+                pos_index += 1
+        return skips
+
     def to_store_format(self, with_positions):
         doc = {
             "i": self._doc_id,
             "f": self.frequency
         }
         if with_positions:
-            doc["p"] = self.positions if with_positions else []
+            doc["p"] = self.positions
+            doc["s"] = self._generate_skips()
         return doc
 
     @staticmethod
@@ -77,6 +95,7 @@ class Posting:
         posting = Posting(data["i"])
         if with_positions:
             posting.positions = data["p"]
+            posting.skips = data["s"]
         posting.frequency = data["f"]
         return posting
 
