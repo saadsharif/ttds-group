@@ -223,10 +223,13 @@ class Index:
                                                       query.facets)
 
             fields = set(query.fields)
-            return [Result(self._id_mappings[doc.doc_id], doc.score, fields=self._get_document(str(doc.doc_id), fields))
+            start_time = time.time()
+            response = [Result(self._id_mappings[doc.doc_id], doc.score, fields=self._get_document(str(doc.doc_id), fields))
                     for
                     doc in
                     docs], facets, total
+            print(f"{time.time() - start_time} to read docs")
+            return response
         except Exception as e:
             raise SearchException(f"Unexpected exception during querying - {e}")
 

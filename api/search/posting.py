@@ -1,4 +1,6 @@
 from functools import total_ordering
+from itertools import islice, starmap, accumulate
+from operator import sub
 
 import ujson as json
 
@@ -69,14 +71,14 @@ class Posting:
             "f": self.frequency
         }
         if with_positions:
-            doc["p"] = self.positions if with_positions else []
+            doc["p"] = [self.positions[0], *starmap(sub, zip(islice(self.positions, 1, None), self.positions))]
         return doc
 
     @staticmethod
     def from_store_format(data, with_positions):
         posting = Posting(data["i"])
         if with_positions:
-            posting.positions = data["p"]
+            posting.positions = list(accumulate(data["p"]))
         posting.frequency = data["f"]
         return posting
 

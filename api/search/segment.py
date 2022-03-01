@@ -173,8 +173,8 @@ class Segment:
         self._postings_index = Store(self._postings_file)
         print("OK")
         print(f"Loading index positions for segment {self._segment_id} from {self._positions_file}...", end="", flush=True)
-        print("OK")
         self._positions_index = Store(self._positions_file)
+        print("OK")
         print(f"Index loaded for {self._segment_id}")
         # load the doc values
         self._doc_values = {}
