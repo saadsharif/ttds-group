@@ -101,11 +101,11 @@ class Posting:
 
     @staticmethod
     def from_store_format(data, with_positions):
-        posting = Posting(data["i"])
+        posting = Posting(data.at_pointer("/i"))
         if with_positions:
-            posting.positions = data["p"]
-            posting.skips = data["s"] if "s" in data else []
-        posting.frequency = data["f"]
+            posting.positions = data.at_pointer("/p").as_list()
+            posting.skips = data.at_pointer("/s").as_list() if "s" in data else []
+        posting.frequency = data.at_pointer("/f")
         return posting
 
     def __eq__(self, other):
@@ -162,9 +162,9 @@ class TermPosting:
         })
 
     @staticmethod
-    def from_store_format(data, with_positions=True):
-        value = json.loads(data)
-        termPosting = TermPosting(value["cf"])
+    def from_store_format(value, with_positions=True):
+        #value = json.loads(data)
+        termPosting = TermPosting(value.at_pointer("/cf"))
         termPosting.postings = [Posting.from_store_format(posting, with_positions=with_positions) for posting in
-                                value["p"]]
+                                value.at_pointer("/p")]
         return termPosting

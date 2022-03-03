@@ -1,4 +1,3 @@
-import ujson as json
 import os.path
 import sys
 import time
@@ -77,7 +76,7 @@ class Segment:
                 p += 1
             for field, values in doc_values.items():
                 if field in self._doc_values:
-                    self._doc_values[field][doc_id] = json.dumps(values)
+                    self._doc_values[field][doc_id] = values
             if doc_id > self._max_doc_id:
                 self._max_doc_id = doc_id
             if doc_id < self._min_doc_id:
@@ -97,13 +96,13 @@ class Segment:
         if doc_id > self._max_doc_id:
             return None
         if doc_id in self._doc_values[field]:
-            return json.loads(self._doc_values[field][doc_id])
+            return self._doc_values[field][doc_id].as_list()
         return None
 
     # if with_positions is False we can use the postings file which is a smaller read
     def get_term(self, term, with_positions=True):
         # use the buffer if this is an in memory segment
-        # can't read whilst flushing the buffer - maybe not needed - prevents empty results basically
+        # can't read whilst flushing the bufffer - maybe not needed - prevents empty results basically
         self._flush_lock.acquire_read()
         pos = []
         if not self._is_flushed:
@@ -116,7 +115,8 @@ class Segment:
         # use the disk postings if this has been flushed
         if with_positions:
             if term in self._positions_index:
-                return TermPosting.from_store_format(self._positions_index[term])
+                data = self._positions_index[term]
+                return TermPosting.from_store_format(data)
         else:
             # this is a cheaper read as postings only
             if term in self._postings_index:
@@ -203,7 +203,7 @@ class Segment:
     def doc_value_items(self):
         for field, doc_values in self._doc_values.items():
             for doc_id, doc_value in doc_values.items():
-                yield field, doc_id, json.loads(doc_value)
+                yield field, doc_id, doc_value.as_list()
 
     # this closes the segment on shutdown
     def close(self):
@@ -232,9 +232,9 @@ class Segment:
         r_iter = iter(r_segment.doc_value_items())
         # we rely on the left segment having lower doc ids than the right
         for field, doc_id, doc_value in l_iter:
-            self._doc_values[field][doc_id] = json.dumps(doc_value)
+            self._doc_values[field][doc_id] = doc_value
         for field, doc_id, doc_value in r_iter:
-            self._doc_values[field][doc_id] = json.dumps(doc_value)
+            self._doc_values[field][doc_id] = doc_value
         print(f"Doc ids merged")
 
     # merge the postings together - note we skip the buffer as it is faster (given no seeking required)
