@@ -1,6 +1,6 @@
 import torch
 from transformers import AutoTokenizer, AutoModel
-
+from sentence_transformers import SentenceTransformer
 class BERTModule:
     '''
     Attributes:
@@ -9,6 +9,7 @@ class BERTModule:
             1:'bert-large-uncased' 
             2: "allenai/longformer-base-4096"
             3: "distilbert-base-uncased"
+            4: 'SBERT'
         tokenizer: pretrained tokenizer
         model: pretrained model
     Methods:
@@ -19,16 +20,22 @@ class BERTModule:
         '''
         Input: (vmodel) string indicating the pre-trained model; default is 'bert-base-uncased' 
         '''
-        self.model_choice = ['bert-base-uncased', 'bert-large-uncased', "allenai/longformer-base-4096","distilbert-base-uncased"]
+        self.model_choice = ['bert-base-uncased', 'bert-large-uncased', "allenai/longformer-base-4096","distilbert-base-uncased",'SBERT']
         self.vmodel = vmodel
-        # Load pre-trained model tokenizer (vocabulary)
-        print('Loading model tokenizer...',end='')
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_choice[self.vmodel])
-        print('done')
-        # Load pre-trained model (weights)
-        print('Loading pre-trained model...',end='')
-        self.model = AutoModel.from_pretrained(self.model_choice[self.vmodel],output_hidden_states = True) 
-        print('done')
+        if vmodel in range(4):
+            # Load pre-trained model tokenizer (vocabulary)
+            print('Loading model tokenizer...',end='')
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_choice[self.vmodel])
+            print('done')
+            # Load pre-trained model (weights)
+            print('Loading pre-trained model...',end='')
+            self.model = AutoModel.from_pretrained(self.model_choice[self.vmodel],output_hidden_states = True) 
+            print('done')
+        elif vmodel == 4:
+            self.model = SentenceTransformer('multi-qa-MiniLM-L6-cos-v1')
+        else:
+            print('No such moel choice!')
+
 
     def config(self):
         print('The configuration of model:')
@@ -45,14 +52,20 @@ class BERTModule:
         #else:
         #    return self.__doc_embedding(input,sentwise)
 
-        # check length
-        input = input.strip()
-        max_len = self.model.config.max_position_embeddings
-        sent_tokens = self.tokenizer(input)['input_ids']
-        if len(sent_tokens) <= max_len:
-            return self.__sentence_embedding(input).tolist() 
+        if self.vmodel in range(4):
+            # check length
+            input = input.strip()
+            max_len = self.model.config.max_position_embeddings
+            sent_tokens = self.tokenizer(input)['input_ids']
+            if len(sent_tokens) <= max_len:
+                return self.__sentence_embedding(input).tolist() 
+            else:
+                return self.__truncated_embedding(sent_tokens,max_len).tolist()
+        elif self.vmodel == 4:
+            return self.model.encode(input)
         else:
-            return self.__truncated_embedding(sent_tokens,max_len).tolist()
+            print('Cannot embed with this model choice!')
+
 
 
     def __query_embedding(self,query):
