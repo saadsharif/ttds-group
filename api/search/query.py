@@ -90,8 +90,8 @@ class Query:
 
     def _evaluate_and(self, components, condition, score=False):
         intersection = []
-        left_side = iter(self.evaluate(components[0], score=score))
-        right_side = iter(self.evaluate(components[1], score=score))
+        left_side = iter(self.evaluate(components[0], condition=condition, score=score))
+        right_side = iter(self.evaluate(components[1], condition=condition, score=score))
         try:
             left_posting = next(left_side)
             right_posting = next(right_side)
@@ -172,20 +172,39 @@ class Query:
         return not_docs
 
     def _phrase_match(self, left, right):
-        left_side = iter(left)
-        right_side = iter(right)
-        try:
-            left = next(left_side)
-            right = next(right_side)
-            while True:
-                if left >= right:
-                    right = next(right_side)
-                else:
-                    if left + 1 == right:
-                        return True
-                    left = next(left_side)
-        except StopIteration:
-            pass
+        left_positions = left.positions
+        right_positions = right.positions
+        li = 0
+        ri = 0
+        # skip pointers
+        left_skips = left.skips
+        right_skips = right.skips
+        ls = 0
+        rs = 0
+        while li < len(left_positions) and ri < len(right_positions):
+            left = left_positions[li]
+            right = right_positions[ri]
+            if left >= right:
+                if rs < len(right_skips):
+                    # we still have a skip to maybe use
+                    right_skip = right_skips[rs]
+                    if left >= right_skip[0]:
+                        # can use the skip and advance the ri pointer
+                        rs += 1
+                        ri = right_skip[1]
+                        continue
+                ri += 1
+            else:
+                if left + 1 == right:
+                    return True
+                if ls < len(left_skips):
+                    # we still have a skip to maybe use
+                    left_skip = left_skips[ls]
+                    if left_skip[0] < right:
+                        ls += 1
+                        li = left_skip[1]
+                        continue
+                li += 1
         return False
 
     def _evaluate_parenthesis(self, components, condition, score=False):

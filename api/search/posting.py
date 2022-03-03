@@ -1,8 +1,6 @@
 import math
 from functools import total_ordering
 
-import ujson as json
-
 
 @total_ordering
 class ScoredPosting:
@@ -24,6 +22,14 @@ class ScoredPosting:
     @property
     def is_stop_word(self):
         return False
+
+    @property
+    def positions(self):
+        return self.posting.positions
+
+    @property
+    def skips(self):
+        return self.posting.skips
 
     def __eq__(self, other):
         return self.posting.doc_id == other.posting.doc_id
