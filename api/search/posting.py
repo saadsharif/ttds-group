@@ -154,16 +154,15 @@ class TermPosting:
         return iter(self.postings)
 
     # TODO: These could be significantly improved. They determine how are postings are stored on disk -
-    #  currently json encoded (cpu ands space wasteful)
+    #  currently json (cpu ands space wasteful)
     def to_store_format(self, with_positions=True):
-        return json.dumps({
+        return {
             "cf": self._collection_frequency,
             "p": [posting.to_store_format(with_positions) for posting in self.postings]
-        })
+        }
 
     @staticmethod
     def from_store_format(value, with_positions=True):
-        #value = json.loads(data)
         termPosting = TermPosting(value.at_pointer("/cf"))
         termPosting.postings = [Posting.from_store_format(posting, with_positions=with_positions) for posting in
                                 value.at_pointer("/p")]

@@ -116,7 +116,7 @@ class Store(dict):
             raise StoreException("Store is append only")
 
         # we have a value we need to store
-        line = f"{json.dumps(key, ensure_ascii=False)}\t{json.dumps(key, ensure_ascii=False)}\n"
+        line = f"{json.dumps(key, ensure_ascii=False)}\t{json.dumps(value, ensure_ascii=False)}\n"
         line = line.encode('UTF-8')
         # we seek to the end immediately - no updates, not deletes
         self._file.seek(0, os.SEEK_END)
