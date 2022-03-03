@@ -31,7 +31,6 @@ class Store(dict):
 
     def __init__(self, path):
         self.path = path
-        self._parser = simdjson.Parser()
 
         if os.path.exists(path):
             file = io.open(path, 'r+b')
@@ -68,9 +67,10 @@ class Store(dict):
         self._free_lines.sort()
 
     def parse_line(self, line):
+        parser = simdjson.Parser()
         (left, sep, right) = line.partition(b'\t')
         term = json.loads(left)
-        value = self._parser.parse(right)
+        value = parser.parse(right)
         return term, value
 
     def parse_key(self, line):
@@ -78,8 +78,9 @@ class Store(dict):
         return json.loads(left)
 
     def parse_value(self, line):
+        parser = simdjson.Parser()
         (left, sep, right) = line.partition(b'\t')
-        return self._parser.parse(right)
+        return parser.parse(right)
 
     def _freeLine(self, offset):
         self._file.seek(offset)
