@@ -9,7 +9,7 @@ class BERTModule:
             1:'bert-large-uncased' 
             2: "allenai/longformer-base-4096"
             3: "distilbert-base-uncased"
-            4: 'SBERT'
+            4: 'multi-qa-MiniLM-L6-cos-v1' (S-BERT trained on consine sim)
         tokenizer: pretrained tokenizer
         model: pretrained model
     Methods:
@@ -20,22 +20,21 @@ class BERTModule:
         '''
         Input: (vmodel) string indicating the pre-trained model; default is 'bert-base-uncased' 
         '''
-        self.model_choice = ['bert-base-uncased', 'bert-large-uncased', "allenai/longformer-base-4096","distilbert-base-uncased",'SBERT']
+        self.model_choice = ['bert-base-uncased', 'bert-large-uncased', "allenai/longformer-base-4096","distilbert-base-uncased",'multi-qa-MiniLM-L6-cos-v1']
         self.vmodel = vmodel
         if vmodel in range(4):
             # Load pre-trained model tokenizer (vocabulary)
             print('Loading model tokenizer...',end='')
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_choice[self.vmodel])
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_choice[vmodel])
             print('done')
             # Load pre-trained model (weights)
             print('Loading pre-trained model...',end='')
-            self.model = AutoModel.from_pretrained(self.model_choice[self.vmodel],output_hidden_states = True) 
+            self.model = AutoModel.from_pretrained(self.model_choice[vmodel],output_hidden_states = True) 
             print('done')
         elif vmodel == 4:
-            self.model = SentenceTransformer('multi-qa-MiniLM-L6-cos-v1')
+            self.model = SentenceTransformer(self.model_choice[vmodel])
         else:
             print('No such moel choice!')
-
 
     def config(self):
         print('The configuration of model:')
@@ -65,43 +64,6 @@ class BERTModule:
             return self.model.encode(input)
         else:
             print('Cannot embed with this model choice!')
-
-
-
-    def __query_embedding(self,query):
-        '''    
-        Input: (query) a query string
-        Output: sentence embedding for query
-        '''
-        return self.__sentence_embedding(query).tolist()# convert tensor to list
-
-    def __doc_embedding(self,doc,sentwise):
-        '''
-        Input: (doc) a document file variable/a list of sentence strings ie. iterable with each element being sentence string
-                (sentwise) whether to embed through averaging sentences vectors
-        Output: (doc_embedding) single vector computed from averaging all sentences embeddings
-        '''
-        doc_sentVectors = {} # a dictionary of tensor lists containing vectors for sentences in doc
-        if sentwise:
-            for i,line in enumerate(doc):
-                sent_embedding = self.__sentence_embedding(line)
-                doc_sentVectors[i]=sent_embedding
-        else: # add line to string until reaches max number of tokens specified by the model
-            max_len = self.model.config.max_position_embeddings
-            sent = ''
-            for i,line in enumerate(doc):
-                new_sent = sent + line.strip()+' '
-                sent_len = len(self.tokenizer(new_sent)['input_ids'])
-                if sent_len > max_len:
-                    sent_embedding = self.__sentence_embedding(sent) 
-                    doc_sentVectors[i]=sent_embedding
-                    sent = line.strip()+" "
-                else:
-                    sent = new_sent
-            sent_embedding = self.__sentence_embedding(sent) 
-            doc_sentVectors[-1]=sent_embedding
-        doc_embedding = sum(doc_sentVectors.values())/len(doc_sentVectors)
-        return doc_embedding.tolist() # convert tensor to listg
     
     def __sentence_embedding(self,sentence):
         '''
@@ -143,4 +105,38 @@ class BERTModule:
         return embedding
 
     
+    def __query_embedding(self,query):
+        '''    
+        Input: (query) a query string
+        Output: sentence embedding for query
+        '''
+        return self.__sentence_embedding(query).tolist()# convert tensor to list
+
+    def __doc_embedding(self,doc,sentwise):
+        '''
+        Input: (doc) a document file variable/a list of sentence strings ie. iterable with each element being sentence string
+                (sentwise) whether to embed through averaging sentences vectors
+        Output: (doc_embedding) single vector computed from averaging all sentences embeddings
+        '''
+        doc_sentVectors = {} # a dictionary of tensor lists containing vectors for sentences in doc
+        if sentwise:
+            for i,line in enumerate(doc):
+                sent_embedding = self.__sentence_embedding(line)
+                doc_sentVectors[i]=sent_embedding
+        else: # add line to string until reaches max number of tokens specified by the model
+            max_len = self.model.config.max_position_embeddings
+            sent = ''
+            for i,line in enumerate(doc):
+                new_sent = sent + line.strip()+' '
+                sent_len = len(self.tokenizer(new_sent)['input_ids'])
+                if sent_len > max_len:
+                    sent_embedding = self.__sentence_embedding(sent) 
+                    doc_sentVectors[i]=sent_embedding
+                    sent = line.strip()+" "
+                else:
+                    sent = new_sent
+            sent_embedding = self.__sentence_embedding(sent) 
+            doc_sentVectors[-1]=sent_embedding
+        doc_embedding = sum(doc_sentVectors.values())/len(doc_sentVectors)
+        return doc_embedding.tolist() # convert tensor to listg
     
