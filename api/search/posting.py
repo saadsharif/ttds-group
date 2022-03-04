@@ -2,6 +2,25 @@ import math
 from functools import total_ordering
 
 
+def _generate_skips(positions):
+    skips = []
+    if len(positions) <= MIN_LENGTH_FOR_SKIP_LIST:
+        # don't bother on skips on short lists
+        return []
+    skip_count = math.floor(math.sqrt(len(positions)))
+    if skip_count > 0:
+        pos_index = 0
+        skip_period = math.floor(len(positions) / skip_count)
+        # -1 because of list indexing starts with 0
+        skip_index = skip_period - 1
+        while pos_index < len(positions):
+            if pos_index == skip_index:
+                skips.append(f"{positions[pos_index]}-{skip_index}")
+                skip_index += skip_period
+            pos_index += 1
+    return skips
+
+
 @total_ordering
 class ScoredPosting:
     def __init__(self, posting, score=0):
@@ -75,43 +94,32 @@ class Posting:
     def __iter__(self):
         return iter(self.positions)
 
-    def _generate_skips(self):
-        skips = []
-        if len(self.positions) <= MIN_LENGTH_FOR_SKIP_LIST:
-            # don't bother on skips on short lists
-            return []
-        skip_count = math.floor(math.sqrt(len(self.positions)))
-        if skip_count > 0:
-            pos_index = 0
-            skip_period = math.floor(len(self.positions) / skip_count)
-            # -1 because of list indexing starts with 0
-            skip_index = skip_period - 1
-            while pos_index < len(self.positions):
-                if pos_index == skip_index:
-                    skips.append([self.positions[pos_index], skip_index])
-                    skip_index += skip_period
-                pos_index += 1
-        return skips
-
     def to_store_format(self, with_positions):
-        doc = {
-            "i": self._doc_id,
-            "f": self.frequency
-        }
+        store_rep = f"{self._doc_id};{self.frequency};"
         if with_positions:
-            doc["p"] = self.positions
-            skips = self._generate_skips()
+            store_rep = f"{store_rep}{':'.join(str(pos) for pos in self.positions)};"
+            skips = _generate_skips(self.positions)
             if len(skips) > 0:
-                doc["s"] = skips
-        return doc
+                store_rep = f"{store_rep}{':'.join(skips)}"
+        else:
+            store_rep = f"{store_rep};"
+        return store_rep
+
+    @staticmethod
+    def skip_from_store(skip):
+        skip_com = skip.split("-")
+        return [int(skip_com[0]), int(skip_com[1])]
 
     @staticmethod
     def from_store_format(data, with_positions):
-        posting = Posting(data.at_pointer("/i"))
+        components = data.split(";")
+        posting = Posting(int(components[0]))
+        posting.frequency = int(components[1])
         if with_positions:
-            posting.positions = data.at_pointer("/p").as_list()
-            posting.skips = data.at_pointer("/s").as_list() if "s" in data else []
-        posting.frequency = data.at_pointer("/f")
+            positions = components[2].split(":")
+            posting.positions = [int(pos) for pos in positions]
+            skips = components[3].split(":")
+            posting.skips = [Posting.skip_from_store(skip.strip()) for skip in skips if skip.strip() != ""]
         return posting
 
     def __eq__(self, other):
@@ -127,6 +135,7 @@ class TermPosting:
     def __init__(self, collecting_frequency=0):
         self._collection_frequency = collecting_frequency
         self.postings = []
+        self.skips = []
 
     def add_position(self, doc_id, position):
         # we assume single threaded index construction and that one doc is added at a time - we thus create
@@ -159,17 +168,17 @@ class TermPosting:
     def __iter__(self):
         return iter(self.postings)
 
-    # TODO: These could be significantly improved. They determine how are postings are stored on disk -
-    #  currently json (cpu ands space wasteful)
     def to_store_format(self, with_positions=True):
-        return {
-            "cf": self._collection_frequency,
-            "p": [posting.to_store_format(with_positions) for posting in self.postings]
-        }
+        store_rep = "|".join([posting.to_store_format(with_positions) for posting in self.postings])
+        skip_rep = ":".join(_generate_skips([posting.doc_id for posting in self.postings]))
+        return f"{self.collection_frequency}|{skip_rep}|{store_rep}"
 
     @staticmethod
     def from_store_format(value, with_positions=True):
-        termPosting = TermPosting(value.at_pointer("/cf"))
+        components = value.split("|")
+        termPosting = TermPosting(int(components[0]))
+        skips = components[1].split(":")
+        termPosting.skips = [Posting.skip_from_store(skip.strip()) for skip in skips if skip.strip() != ""]
         termPosting.postings = [Posting.from_store_format(posting, with_positions=with_positions) for posting in
-                                value.at_pointer("/p")]
+                                components[2:]]
         return termPosting

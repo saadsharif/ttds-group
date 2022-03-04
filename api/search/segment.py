@@ -2,7 +2,7 @@ import os.path
 import sys
 import time
 import uuid
-
+import ujson as json
 from search.lock import ReadWriteLock
 from search.posting import TermPosting
 from search.store import Store
@@ -76,7 +76,7 @@ class Segment:
                 p += 1
             for field, values in doc_values.items():
                 if field in self._doc_values:
-                    self._doc_values[field][doc_id] = values
+                    self._doc_values[field][doc_id] = json.dumps(values)
             if doc_id > self._max_doc_id:
                 self._max_doc_id = doc_id
             if doc_id < self._min_doc_id:
@@ -96,7 +96,7 @@ class Segment:
         if doc_id > self._max_doc_id:
             return None
         if doc_id in self._doc_values[field]:
-            return self._doc_values[field][doc_id].as_list()
+            return self._doc_values[field][doc_id]
         return None
 
     # if with_positions is False we can use the postings file which is a smaller read
@@ -203,7 +203,7 @@ class Segment:
     def doc_value_items(self):
         for field, doc_values in self._doc_values.items():
             for doc_id, doc_value in doc_values.items():
-                yield field, doc_id, doc_value.as_list()
+                yield field, doc_id, json.loads(doc_value)
 
     # this closes the segment on shutdown
     def close(self):
@@ -222,9 +222,9 @@ class Segment:
         min_id_r, max_id_r = r_segment.get_doc_id_range()
         self._min_doc_id = min(min_id_l, min_id_r)
         self._max_doc_id = max(max_id_l, max_id_r)
+        self._merge_doc_ids(l_segment, r_segment)
         self._merge_postings(l_segment, r_segment)
         self._merge_positions(l_segment, r_segment)
-        self._merge_doc_ids(l_segment, r_segment)
 
     def _merge_doc_ids(self, l_segment, r_segment):
         print(f"Merging doc ids into {self._segment_id}...")
@@ -232,9 +232,9 @@ class Segment:
         r_iter = iter(r_segment.doc_value_items())
         # we rely on the left segment having lower doc ids than the right
         for field, doc_id, doc_value in l_iter:
-            self._doc_values[field][doc_id] = doc_value
+            self._doc_values[field][doc_id] = json.dumps(doc_value)
         for field, doc_id, doc_value in r_iter:
-            self._doc_values[field][doc_id] = doc_value
+            self._doc_values[field][doc_id] = json.dumps(doc_value)
         print(f"Doc ids merged")
 
     # merge the postings together - note we skip the buffer as it is faster (given no seeking required)

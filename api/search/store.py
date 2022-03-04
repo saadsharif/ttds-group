@@ -1,4 +1,3 @@
-import simdjson
 import ujson as json
 import io
 import os.path
@@ -67,10 +66,9 @@ class Store(dict):
         self._free_lines.sort()
 
     def parse_line(self, line):
-        parser = simdjson.Parser()
         (left, sep, right) = line.partition(b'\t')
         term = json.loads(left)
-        value = parser.parse(right)
+        value = right.decode('utf-8').strip()
         return term, value
 
     def parse_key(self, line):
@@ -78,9 +76,8 @@ class Store(dict):
         return json.loads(left)
 
     def parse_value(self, line):
-        parser = simdjson.Parser()
         (left, sep, right) = line.partition(b'\t')
-        return parser.parse(right)
+        return right.decode('utf-8').strip()
 
     def _freeLine(self, offset):
         self._file.seek(offset)
@@ -117,7 +114,7 @@ class Store(dict):
             raise StoreException("Store is append only")
 
         # we have a value we need to store
-        line = f"{json.dumps(key, ensure_ascii=False)}\t{json.dumps(value, ensure_ascii=False)}\n"
+        line = f"{json.dumps(key, ensure_ascii=False)}\t{value}\n"
         line = line.encode('UTF-8')
         # we seek to the end immediately - no updates, not deletes
         self._file.seek(0, os.SEEK_END)
