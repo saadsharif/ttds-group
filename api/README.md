@@ -32,7 +32,8 @@ We support:
 
 1. Pagination
 2. Filtering fields - you ask only print specific fields to keep the request size down
-
+3. Faceting
+4. Filtering by Facet valuess
 For example, the below requests results between 10 and 20. Only the title is shown:
 
 
@@ -46,6 +47,75 @@ curl --location --request POST 'http://127.0.0.1:5000/search' \
     "fields": ["title"]
 }'
 ```
+
+with facets and a filter...
+
+```bash
+curl --location --request POST 'http://127.0.0.1:5000/search' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "query": "\"machine learning model\"",
+    "max_results": 1,
+    "facets": [
+        {
+            "field":"authors"
+        },
+         {
+            "field":"subject"
+        }
+    ],
+    "filters": [
+        {
+            "field": "subject",
+            "value": "Machine Learning"
+        }
+    ]
+}'
+```
+
+Example response:
+
+```bash
+{
+    "hits": [
+        {
+            "fields": {},
+            "id": "2101.11948",
+            "score": 3.9060001732691654
+        }
+    ],
+    "request_id": "8ed31160-9c97-11ec-8c18-215059e8f3ba",
+    "total_hits": 384,
+    "facets": {
+        "authors": {
+            "Yuzhou Lin": 3,
+            "Shuiwang Ji": 2,
+            "Raviraj Joshi": 2,
+            "Mohammadhossein Toutiaee": 2,
+            "Chao Zhang": 2,
+            "Joaquin Vanschoren": 2,
+            "Liang Xu": 2,
+            "Xiaolin Chang": 2,
+            "Li Xiong": 2,
+            "Jia Wu": 2
+        },
+        "subject": {
+            "Machine Learning": 442,
+            "Artificial Intelligence": 92,
+            "Computer Vision and Pattern Recognition": 69,
+            "Cryptography and Security": 34,
+            "Systems and Control": 32,
+            "Computation and Language": 26,
+            "Image and Video Processing": 20,
+            "Distributed, Parallel, and Cluster Computing": 14,
+            "Computers and Society": 13,
+            "Optimization and Control": 12
+        }
+    }
+}
+```
+
+**Facets and filtering are supported on authors and subjects. This is configurable if required.**
 
 ### Indexing a single doc
 
