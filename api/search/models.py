@@ -41,6 +41,7 @@ class Search:
         self.fields = fields
         self.max_results = max_results
         self.offset = offset
+        self.vector_score = vector_score
 
 
 class Facet:
