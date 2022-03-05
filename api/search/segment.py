@@ -100,7 +100,7 @@ class Segment:
         return None
 
     # if with_positions is False we can use the postings file which is a smaller read
-    def get_term(self, term, with_positions=True):
+    def get_term(self, term, with_positions=True, with_skips=True):
         # use the buffer if this is an in memory segment
         # can't read whilst flushing the bufffer - maybe not needed - prevents empty results basically
         self._flush_lock.acquire_read()
@@ -116,11 +116,12 @@ class Segment:
         if with_positions:
             if term in self._positions_index:
                 data = self._positions_index[term]
-                return TermPosting.from_store_format(data)
+                return TermPosting.from_store_format(data, with_skips=with_skips)
         else:
             # this is a cheaper read as postings only
             if term in self._postings_index:
-                return TermPosting.from_store_format(self._postings_index[term], with_positions=False)
+                return TermPosting.from_store_format(self._postings_index[term], with_positions=False,
+                                                     with_skips=with_skips)
 
     # flushed the buffer to disk - this can be called manually and "closes" the segment to additions making it immutable
     def flush(self):
@@ -169,10 +170,12 @@ class Segment:
         self._flush_lock = ReadWriteLock()
         self._indexing_lock = ReadWriteLock()
         # this will load the index off disk
-        print(f"Loading index postings for segment {self._segment_id} from {self._postings_file}...", end="", flush=True)
+        print(f"Loading index postings for segment {self._segment_id} from {self._postings_file}...", end="",
+              flush=True)
         self._postings_index = Store(self._postings_file)
         print("OK")
-        print(f"Loading index positions for segment {self._segment_id} from {self._positions_file}...", end="", flush=True)
+        print(f"Loading index positions for segment {self._segment_id} from {self._positions_file}...", end="",
+              flush=True)
         self._positions_index = Store(self._positions_file)
         print("OK")
         print(f"Index loaded for {self._segment_id}")

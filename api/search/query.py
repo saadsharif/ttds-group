@@ -14,7 +14,7 @@ from pyparsing import (
     oneOf,
 )
 
-from search.posting import ScoredPosting, Posting
+from search.posting import ScoredPosting, Posting, TermPosting
 
 
 class Query:
@@ -23,6 +23,7 @@ class Query:
         self._index = index
         # false indicates positions will not be loaded answering queries - set to true if a phrase or proximity query is used
         self._with_positions = False
+        self._with_posting_skips = False
         # this builds the grammar to parse expressions using pyparser - we support booleans, quotes, proximity
         # + parenthesis (TBC)
         or_operator = Forward()
@@ -89,31 +90,53 @@ class Query:
         }
 
     def _evaluate_and(self, components, condition, score=False):
+        self._with_posting_skips = True
         intersection = []
-        left_side = iter(self.evaluate(components[0], condition=condition, score=score))
-        right_side = iter(self.evaluate(components[1], condition=condition, score=score))
-        try:
-            left_posting = next(left_side)
-            right_posting = next(right_side)
-            if (left_posting and left_posting.is_stop_word) or (right_posting and right_posting.is_stop_word):
-                return self._evaluate_or(components, condition, score=score)
-            while True:
-                if left_posting.doc_id > right_posting.doc_id:
-                    right_posting = next(right_side)
-                elif left_posting.doc_id < right_posting.doc_id:
-                    left_posting = next(left_side)
-                else:
-                    if condition(left_posting, right_posting):
-                        if score:
-                            intersection.append(ScoredPosting(left_posting,
-                                                              left_posting.score + right_posting.score))
-                        else:
-                            intersection.append(left_posting)
-                    right_posting = next(right_side)
-                    left_posting = next(left_side)
-        except StopIteration:
-            pass
-        return intersection
+        left_term_posting = self.evaluate(components[0], condition=condition, score=score)
+        right_term_posting = self.evaluate(components[1], condition=condition, score=score)
+        li = 0
+        ri = 0
+        ls = 0
+        rs = 0
+        left_skips = left_term_posting.skips
+        right_skips = right_term_posting.skips
+        if left_term_posting.is_stop_word or right_term_posting.is_stop_word:
+            return self._execute_or(left_term_posting, right_term_posting)
+        left_postings = left_term_posting.postings
+        right_postings = right_term_posting.postings
+        while li < len(left_postings) and ri < len(right_postings):
+            left_posting = left_postings[li]
+            right_posting = right_postings[ri]
+            if left_posting.doc_id > right_posting.doc_id:
+                if rs < len(right_skips):
+                    right_skip = right_skips[rs]
+                    if left_posting.doc_id >= right_skip[0]:
+                        # can use the skip and advance the ri pointer
+                        rs += 1
+                        ri = right_skip[1]
+                        continue
+                ri += 1
+            elif left_posting.doc_id < right_posting.doc_id:
+                if ls < len(left_skips):
+                    # we still have a skip to maybe use
+                    left_skip = left_skips[ls]
+                    if left_skip[0] <= right_posting.doc_id:
+                        ls += 1
+                        li = left_skip[1]
+                        continue
+                li += 1
+            else:
+                if condition(left_posting, right_posting):
+                    if score:
+                        intersection.append(ScoredPosting(left_posting, left_posting.score + right_posting.score))
+                    else:
+                        intersection.append(left_posting)
+                li += 1
+                ri += 1
+        self._with_posting_skips = False
+        term_posting = TermPosting()
+        term_posting.postings = intersection
+        return term_posting
 
     def _evaluate_natural(self, components, condition, score=True):
         # start = time.time()
@@ -146,22 +169,28 @@ class Query:
         if last is not None:
             yield last
 
+    def _execute_or(self, left_term_posting, right_term_posting):
+        if left_term_posting.is_stop_word:
+            left_term_posting = TermPosting()
+        if right_term_posting.is_stop_word:
+            right_term_posting = TermPosting()
+        merged_term_posting = TermPosting()
+        merged_term_posting.postings = list(self._posting_merge(left_term_posting.postings, right_term_posting.postings))
+        return merged_term_posting
+
     def _evaluate_or(self, components, condition, score=False):
-        left_postings = self.evaluate(components[0], score=score)
-        right_postings = self.evaluate(components[1], score=score)
-        if len(left_postings) == 1 and left_postings[0].is_stop_word:
-            left_postings = []
-        if len(right_postings) == 1 and right_postings[0].is_stop_word:
-            right_postings = []
-        return list(
-            self._posting_merge(left_postings, right_postings))
+        left_term_posting = self.evaluate(components[0], score=score)
+        right_term_posting = self.evaluate(components[1], score=score)
+        return self._execute_or(left_term_posting, right_term_posting)
 
     def _evaluate_not(self, components, condition, score):
         not_docs = []
-        right_side = iter(self.evaluate(components[0], score=score))
-        right = next(right_side, None)
-        if right.is_stop_word:
+        right_term_posting = self.evaluate(components[0], score=score)
+        if right_term_posting.is_stop_word:
             right = None
+        else:
+            right_side = iter(right_term_posting)
+            right = next(right_side, None)
         doc_id = 1
         while doc_id < self._index.current_id:
             if not right or doc_id < right.doc_id:
@@ -169,18 +198,20 @@ class Query:
             else:
                 right = next(right_side, None)
             doc_id += 1
-        return not_docs
+        term_posting = TermPosting()
+        term_posting.postings = not_docs
+        return term_posting
 
     def _phrase_match(self, left, right):
         left_positions = left.positions
         right_positions = right.positions
         li = 0
         ri = 0
+        ls = 0
+        rs = 0
         # skip pointers
         left_skips = left.skips
         right_skips = right.skips
-        ls = 0
-        rs = 0
         while li < len(left_positions) and ri < len(right_positions):
             left = left_positions[li]
             right = right_positions[ri]
@@ -251,26 +282,29 @@ class Query:
         self._with_positions = False
         return proximity_response
 
-
     def _evaluate_term(self, components, condition, score):
         # score the docs
-        scored_postings = []
         term = components[0]
         if ":" not in term:
             # : indicates a special lookup on a protected term
             term = self._index.analyzer.process_token(term)
         if term is None:
-            # we have a stop word - a special case - we use a doc id of 0 (this should never exist)
-            return [Posting(0, stop_word=True)]
-        term_postings = self._index.get_term(term, with_positions=self._with_positions)
+            # we have a stop word - a special case
+            return TermPosting(stop_word=True)
+        term_posting = self._index.get_term(term, with_positions=self._with_positions,
+                                            with_skips=self._with_posting_skips)
         if not score:
-            return term_postings
+            return term_posting
 
-        for doc_posting in term_postings:
+        scored_postings = []
+        for doc_posting in term_posting:
             score = (1 + math.log10(doc_posting.frequency)) * \
-                    math.log10(self._index.number_of_docs / term_postings.doc_frequency)
+                    math.log10(self._index.number_of_docs / term_posting.doc_frequency)
             scored_postings.append(ScoredPosting(doc_posting, score=score))
-        return scored_postings
+        scored_posting = TermPosting(collecting_frequency=term_posting.collection_frequency)
+        scored_posting.postings = scored_postings
+        scored_posting.skips = term_posting.skips
+        return scored_posting
 
     def _get_facets(self, facets, docs):
         facet_values = {}
@@ -290,11 +324,8 @@ class Query:
 
     def execute(self, query, score, max_results, offset, facets):
         parsed = self._parser(query)
-        docs = self.evaluate(parsed[0], score=score)
+        docs = self.evaluate(parsed[0], score=score).postings
         facet_values = {}
-        if len(docs) == 1 and docs[0].doc_id == 0:
-            # a doc based on a stop word search
-            return [], facet_values, 0
         if len(facets) > 0:
             facet_values = self._get_facets(facets, docs)
         # we would add pagination here

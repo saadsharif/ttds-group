@@ -60,19 +60,20 @@ class ScoredPosting:
 MIN_LENGTH_FOR_SKIP_LIST = 3
 
 
+def parse_skip(skip):
+    for i in range(0, len(skip)):
+        if skip[i] == "-":
+            return int(skip[0:i]), int(skip[i+1:])
+
+
 @total_ordering
 class Posting:
 
-    def __init__(self, doc_id, stop_word=False):
+    def __init__(self, doc_id):
         self.positions = []
         self.skips = []
         self._doc_id = doc_id
-        self._stop_word = stop_word
         self.frequency = 0
-
-    @property
-    def is_stop_word(self):
-        return self._stop_word
 
     @property
     def doc_id(self):
@@ -105,10 +106,6 @@ class Posting:
             store_rep = f"{store_rep};"
         return store_rep
 
-    @staticmethod
-    def skip_from_store(skip):
-        skip_com = skip.split("-")
-        return [int(skip_com[0]), int(skip_com[1])]
 
     @staticmethod
     def from_store_format(data, with_positions):
@@ -119,7 +116,7 @@ class Posting:
             positions = components[2].split(":")
             posting.positions = [int(pos) for pos in positions]
             skips = components[3].split(":")
-            posting.skips = [Posting.skip_from_store(skip.strip()) for skip in skips if skip.strip() != ""]
+            posting.skips = [parse_skip(skip) for skip in skips if skip != ""]
         return posting
 
     def __eq__(self, other):
@@ -132,10 +129,11 @@ class Posting:
 # encapsulates all the information about a term
 class TermPosting:
 
-    def __init__(self, collecting_frequency=0):
+    def __init__(self, collecting_frequency=0, stop_word=False):
         self._collection_frequency = collecting_frequency
         self.postings = []
         self.skips = []
+        self._stop_word = stop_word
 
     def add_position(self, doc_id, position):
         # we assume single threaded index construction and that one doc is added at a time - we thus create
@@ -144,6 +142,10 @@ class TermPosting:
             self.postings.append(Posting(doc_id))
         self.postings[-1].add_position(position)
         self._collection_frequency += 1
+
+    @property
+    def is_stop_word(self):
+        return self._stop_word
 
     @property
     def doc_frequency(self):
@@ -159,10 +161,17 @@ class TermPosting:
         return Posting(-1)
 
     # used to collate term information across many term postings
-    def add_term_info(self, term_posting):
+    def add_term_info(self, term_posting, update_skips=False):
         if term_posting:
             self._collection_frequency += term_posting.collection_frequency
             # this should be in order for future merges self.postings.append(term_posting.postings)
+            if update_skips:
+                current_offset = len(self.postings)
+                if current_offset == 0:
+                    # optimization for first segement and when there is only one
+                    self.skips = term_posting.skips
+                else:
+                    self.skips = self.skips + [[skip[0], skip[1]+current_offset] for skip in term_posting.skips]
             self.postings = self.postings + term_posting.postings
 
     def __iter__(self):
@@ -174,11 +183,12 @@ class TermPosting:
         return f"{self.collection_frequency}|{skip_rep}|{store_rep}"
 
     @staticmethod
-    def from_store_format(value, with_positions=True):
+    def from_store_format(value, with_positions=True, with_skips=True):
         components = value.split("|")
         termPosting = TermPosting(int(components[0]))
-        skips = components[1].split(":")
-        termPosting.skips = [Posting.skip_from_store(skip.strip()) for skip in skips if skip.strip() != ""]
+        if with_skips:
+            skips = components[1].split(":")
+            termPosting.skips = [parse_skip(skip) for skip in skips if skip != ""]
         termPosting.postings = [Posting.from_store_format(posting, with_positions=with_positions) for posting in
                                 components[2:]]
         return termPosting
