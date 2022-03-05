@@ -13,6 +13,7 @@ from pyparsing import (
     OneOrMore,
     oneOf,
 )
+from scipy import spatial
 
 from search.posting import ScoredPosting, Posting, TermPosting
 
@@ -139,9 +140,6 @@ class Query:
         return term_posting
 
     def _evaluate_natural(self, components, condition, score=True):
-        # start = time.time()
-        # query_vector = self._index.get_vector(" ".join([" ".join(component) for component in components]))
-        # print(f"{time.time() - start}s for vector query generation")
         # TODO: Replace this with HNSW vector scoring
         return self._evaluate_or(components, condition, score=True)
 
@@ -175,7 +173,8 @@ class Query:
         if right_term_posting.is_stop_word:
             right_term_posting = TermPosting()
         merged_term_posting = TermPosting()
-        merged_term_posting.postings = list(self._posting_merge(left_term_posting.postings, right_term_posting.postings))
+        merged_term_posting.postings = list(
+            self._posting_merge(left_term_posting.postings, right_term_posting.postings))
         return merged_term_posting
 
     def _evaluate_or(self, components, condition, score=False):
@@ -322,16 +321,37 @@ class Query:
                     sorted(facet_values[facet.field].items(), key=itemgetter(1), reverse=True)[:facet.num_values])
         return facet_values
 
-    def execute(self, query, score, max_results, offset, facets):
+    def execute(self, query, score, max_results, offset, facets, vector_score=0):
         parsed = self._parser(query)
         docs = self.evaluate(parsed[0], score=score).postings
         facet_values = {}
         if len(facets) > 0:
             facet_values = self._get_facets(facets, docs)
         # we would add pagination here
-        if score:
+        if score and len(docs) > 0:
             # if we have an offset we need offset + max_results
-            return heapq.nlargest(max_results + offset, docs, key=lambda doc: doc.score)[
-                   offset:offset + max_results], facet_values, len(docs)
+            sorted_docs = heapq.nlargest(max_results + offset, docs, key=lambda doc: doc.score)
+            if vector_score == 0:
+                return sorted_docs[offset:offset + max_results], facet_values, len(docs)
+            else:
+                max_score = sorted_docs[0].score
+                query_string = " ".join([" ".join(component) for component in parsed])
+                query_vector = self._index.get_vector(query_string)
+                s = 0
+                # re-score the top N
+                for doc in sorted_docs:
+                    doc_vector = self._index.get_document_vector(doc.doc_id)
+                    # we add the distance to the max score of the query - this ensures our re-scored are on the top
+                    if len(doc_vector) == len(query_vector):
+                        doc.score = spatial.distance.cosine(doc_vector, query_vector) + max_score
+                    else:
+                        print(
+                            f"WARNING: not re-scoring docs {doc.doc_id} as doc vector length[{len(doc_vector)}] is different than query vector length[{len(query_vector)}]")
+                    if s == vector_score:
+                        break
+                    s += 1
+                return heapq.nlargest(max_results + offset, docs, key=lambda doc: doc.score)[
+                       offset:offset + max_results], facet_values, len(docs)
+
         return heapq.nsmallest(max_results, docs, key=lambda doc: doc.doc_id)[
                offset:offset + max_results], facet_values, len(docs)
