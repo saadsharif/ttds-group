@@ -8,7 +8,7 @@ class DocumentSchema(Schema):
     title = fields.Str(required=True)
     authors = fields.List(fields.Str(), default=[], missing=[], required=False)
     abstract = fields.Str(required=True)
-    subject = fields.Str(required=False)
+    subject = fields.List(fields.Str(), default=[], missing=[], required=False)
     body = fields.Str(required=False, allow_none=True)
 
     @post_load
