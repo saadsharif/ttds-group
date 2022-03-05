@@ -121,7 +121,7 @@ Example response:
 
 To re-score the top N documents using indexed vectors and cosine similarity use the param `vector_scoring`. 
 This will cause the first N documents to be re-scored after sorting by tf-idf score. Docs will then be re-sorted by score. 
-Note: Each document gets its vector score + the max tf-idf score.
+Note: Each document gets its vector score + the max tf-idf score - thus ensure re-scored docs are on the top.
 
 A value of `-1` will re-score all documents. The default `0` means no re-scoring.
 
