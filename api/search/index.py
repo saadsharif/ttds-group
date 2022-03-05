@@ -12,6 +12,7 @@ from search.posting import TermPosting
 from search.query import Query
 from search.segment import Segment, _create_segment_id
 from search.store import DocumentStore
+import ujson as json
 
 
 class Index:
@@ -58,7 +59,7 @@ class Index:
             del state['_write_lock']
             del state['_merge_lock']
             del state['_segment_update_lock']
-            #del state['_vector_model']
+            # del state['_vector_model']
             pickle.dump(state, index_file)
             print("OK")
 
@@ -239,7 +240,7 @@ class Index:
             for segment in self._segments:
                 term_posting = segment.get_term(term, with_positions=with_positions, with_skips=with_skips)
                 if term_posting:
-                    combined_posting.add_term_info(term_posting,update_skips=True)
+                    combined_posting.add_term_info(term_posting, update_skips=True)
         self._segment_update_lock.release_read()
         return combined_posting
 
@@ -256,7 +257,7 @@ class Index:
         if field in self._doc_value_fields:
             # once we find the segment we can break
             for segment in self._segments:
-                values = segment.get_doc_values(field, doc_id)
+                values = json.loads(segment.get_doc_values(field, doc_id))
                 if values is not None:
                     break
         self._segment_update_lock.release_read()

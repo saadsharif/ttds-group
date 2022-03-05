@@ -41,7 +41,7 @@ with open(args.file, "r") as query_file, open(args.output, "w") as output_file:
         times.append(elapsed)
         query_times.append((query, elapsed))
         output_file.write(f"{query},{hits['total_hits']}\n")
-        print(f"{query} - took {elapsed}s with {hits['total_hits']} hits")
+        print(f"{query} - took {elapsed}s with {hits['total_hits']} hits - current mean {statistics.mean(times)}s")
 
 print("----------------STATISTICS----------------")
 print(f"Max: {max(times)}")
