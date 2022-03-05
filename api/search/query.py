@@ -239,7 +239,7 @@ class Query:
         return False
 
     def _evaluate_parenthesis(self, components, condition, score=False):
-        raise NotImplemented
+        return self.evaluate(components[0], condition, score=score)
 
     def _evaluate_phrases(self, components, condition, score):
         # first we perform an AND by re-writing the query

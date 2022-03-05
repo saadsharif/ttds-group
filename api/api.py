@@ -62,10 +62,10 @@ def search():
     except ValidationError as e:
         return jsonify(APIErrorSchema().dump(APIError('unable to parse search request', e.messages))), 400
     except SearchException as se:
-        return jsonify(APIErrorSchema().dump(APIError('unable to execute search', se.messages))), 400
+        return jsonify(APIErrorSchema().dump(APIError('unable to execute search', {"exception": se.message}))), 400
     except Exception as ue:
         return jsonify(
-            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', ue.messages))), 400
+            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
 
 
 @app.route('/index', methods=['POST'])
@@ -86,7 +86,7 @@ def index_doc():
         return jsonify(APIErrorSchema().dump(APIError('unable to persist documents', {'index': se.message}))), 400
     except Exception as ue:
         return jsonify(
-            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', ue.messages))), 400
+            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
 
 
 @app.route('/bulk_index', methods=['POST'])
@@ -122,7 +122,7 @@ def bulk_index():
         return jsonify(APIErrorSchema().dump(APIError('unable to persist documents', {'index': se.message}))), 400
     except Exception as ue:
         return jsonify(
-            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', ue.messages))), 400
+            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
 
 
 # this saves the current index segment in memory to disk - it causes internal indexing and querying to be locked.
@@ -136,7 +136,7 @@ def flush():
         return jsonify(APIErrorSchema().dump(APIError('unable to persist documents', {'index': se.message}))), 400
     except Exception as ue:
         return jsonify(
-            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', ue.messages))), 400
+            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception',{"exception": str(ue)}))), 400
 
 
 # selects two segments (smallest and flushed) and merges them together
@@ -152,7 +152,7 @@ def optimize():
         return jsonify(APIErrorSchema().dump(APIError('unable to merge segments', {'index': se.message}))), 400
     except Exception as ue:
         return jsonify(
-            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', ue.messages))), 400
+            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
 
 
 def on_exit_api():
