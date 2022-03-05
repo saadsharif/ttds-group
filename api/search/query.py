@@ -25,6 +25,7 @@ class Query:
         # false indicates positions will not be loaded answering queries - set to true if a phrase or proximity query is used
         self._with_positions = False
         self._with_posting_skips = False
+        self._is_natural = False
         # this builds the grammar to parse expressions using pyparser - we support booleans, quotes, proximity
         # + parenthesis (TBC)
         or_operator = Forward()
@@ -335,7 +336,8 @@ class Query:
                 return sorted_docs[offset:offset + max_results], facet_values, len(docs)
             else:
                 max_score = sorted_docs[0].score
-                query_string = " ".join([" ".join(component) for component in parsed])
+                # TODO: improve this as it includes boolean operators potentially
+                query_string = query.lower()
                 query_vector = self._index.get_vector(query_string)
                 s = 0
                 # re-score the top N

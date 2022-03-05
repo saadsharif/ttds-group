@@ -25,11 +25,7 @@ def _generate_skips(positions):
 class ScoredPosting:
     def __init__(self, posting, score=0):
         self.posting = posting
-        self._score = score
-
-    @property
-    def score(self):
-        return self._score
+        self.score = score
 
     @property
     def doc_id(self):

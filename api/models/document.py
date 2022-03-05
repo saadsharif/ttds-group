@@ -20,7 +20,7 @@ class DocumentSchema(Schema):
             'abstract': data['abstract'],
             'subject': data['subject'],
             'body': '' if data['body'] is None else data['body']
-        })
+        }, vector=data['vector'])
 
     @post_dump
     def null_to_empty_string(self, data):
