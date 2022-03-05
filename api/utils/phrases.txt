@@ -1,0 +1,211 @@
+"the theory of relativity",1232
+"charge density",4427
+"point spread",2440
+"learning computer vision",2758
+"graph representation learning",1793
+"prove existence uniqueness",3657
+"things iot",2424
+"star forming",4035
+"numerical experiments demonstrate",854
+"computed tomography ct",200
+"proposed method",28105
+"current state art",7173
+"artificial intelligence ai",745
+"inelastic neutron",613
+"point spread function",2172
+"agreement experimental data",2397
+"orthogonal multiple",610
+"state art approaches",3088
+"low rank matrix",1500
+"optical coherence",933
+"noisy intermediate scale",916
+"results show",46797
+"neural network",51364
+"aerial vehicles",2142
+"multi label classification",1271
+"neural network cnn",10248
+"code https",6036
+"signal noise ratio",10657
+"automatic speech",2151
+"machine reading",1176
+"type ia",425
+"quark gluon",2376
+"convex optimization problem",5107
+"plays important role",19662
+"orders magnitude faster",1411
+"static spherically",880
+"star forming galaxies",1544
+"multiple input",2645
+"real world",30759
+"multi label",2597
+"experiments benchmark",1609
+"interference noise",880
+"plays crucial",7377
+"simulation results show",5945
+"machine learning approach",13227
+"proposed approach",15910
+"real world datasets",3927
+"based deep",7024
+"things iot",2424
+"semi supervised learning",5163
+"primordial magnetic fields",192
+"region parameter space",2832
+"optimal control",5942
+"term memory lstm",3108
+"orbital angular",2789
+"cyber physical systems",1826
+"financial time",690
+"data driven approach",3133
+"extensive experiments demonstrate",1863
+"machine learning model",20562
+"real world data",3693
+"real world networks",1005
+"future research directions",3878
+"log log log",19670
+"mock theta functions",68
+"high resolution",16978
+"artificial neural",6820
+"proton proton collisions",1421
+"things iot devices",1237
+"ab initio calculations",891
+"extensive experiments",7787
+"play important",20072
+"multiple input",2645
+"proton proton",1941
+"news detection",481
+"monte carlo",22035
+"large scale datasets",4886
+"large scale dataset",4886
+"experiments benchmark",1609
+"conformal field theory",2319
+"microwave background cmb",1686
+"recurrent neural",11177
+"reconfigurable intelligent",657
+"magnetic resonance",4167
+"graph representation learning",1793
+"show proposed algorithm",2262
+"numerical results",17101
+"data driven approach",3133
+"pierre auger",256
+"prove existence uniqueness",3657
+"reconfigurable intelligent",657
+"intermediate scale",1587
+"black hole binary",992
+"pre trained models",13945
+"play significant",4215
+"optical coherence",933
+"inert doublet model",113
+"high dimensional data",3745
+"learning based",18291
+"dark matter",7500
+"resolved photoemission",978
+"publicly https github",1675
+"synthetic real",2377
+"riemann zeta function",943
+"neural network architectures",14894
+"machine learning",54024
+"reduced order",2940
+"extensive experiments show",2293
+"star forming regions",1690
+"unmanned aerial vehicle",1810
+"real world problems",1975
+"play crucial",7377
+"point spread function",2172
+"von neumann",4338
+"multi agent systems",2097
+"existing state art",1905
+"data driven",13744
+"al phys rev",255
+"show proposed",9947
+"play key role",6057
+"simulation results",15655
+"extensive experimental",1979
+"state art deep",1385
+"method multipliers admm",667
+"black hole mass",2022
+"extensive experimental results",1346
+"spectral energy distribution",2489
+"real world data",3693
+"static spherically symmetric",846
+"alternating direction method",1184
+"extensive experiments real",796
+"potential energy",6204
+"plays important role",19662
+"play key",6198
+"deep reinforcement learning",6227
+"neural network architecture",14894
+"potential energy",6204
+"high resolution",16978
+"supervised learning",14792
+"deep learning model",17836
+"point spread function",2172
+"long short",10327
+"mobile edge",1344
+"gamma ray bursts",1473
+"show proposed",9947
+"deep neural networks",24321
+"quantum information processing",3221
+"primordial magnetic",192
+"black hole",10039
+"strong magnetic",2563
+"high dimensional data",3745
+"convolutional neural network",24445
+"energy momentum tensor",2420
+"periodic boundary",6949
+"generative adversarial network",8736
+"term memory",7522
+"quantum rabi",150
+"domain adaptation uda",423
+"spin hall",1548
+"propose data",2128
+"probability density function",7619
+"state art",43428
+"neural networks cnn",10248
+"navier stokes",3497
+"type ia",425
+"conformal field",2365
+"method outperforms state",1718
+"fuzzy dark",201
+"extensive experiments",7787
+"data driven",13744
+"light matter",1899
+"partial differential equations",11546
+"standard model sm",296
+"real world applications",6877
+"central limit theorem",3147
+"al phys",262
+"machine learning",54024
+"kullback leibler",3469
+"star formation",4537
+"noisy intermediate scale",916
+"massive multiple",515
+"star formation rate",2208
+"transition metal dichalcogenides",1594
+"massive multiple input",475
+"charge density",4427
+"named entity",2375
+"upper lower",11770
+"neural network cnn",10248
+"gaussian process",6238
+"machine learning model",20562
+"scanning tunneling",1426
+"computational fluid",2233
+"achieving state",7871
+"state art performance",6665
+"decision making process",2310
+"deep learning",38966
+"markov decision",3907
+"frac frac frac",52
+"resolved photoemission",978
+"natural language understanding",7293
+"previous state",3145
+"show method",7543
+"magnetic field strength",4343
+"bose einstein",2961
+"angle resolved photoemission",911
+"bethe salpeter equation",425
+"massive multiple input",475
+"data driven",13744
+"primordial black",777
+"neural networks cnns",10248
+"experimental results show",13163

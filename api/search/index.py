@@ -5,7 +5,6 @@ import time
 import uuid
 from bidict import bidict
 from search.analyzer import Analyzer
-from search.bert import BERTModule
 from search.exception import IndexException, SearchException, MergeException
 from search.lock import ReadWriteLock
 from search.models import Result
@@ -38,7 +37,7 @@ class Index:
         # used to ensure single threaded indexing
         self._write_lock = ReadWriteLock()
         # bert model for vectors
-        self._vector_model = BERTModule()
+        # self._vector_model = BERTModule()
         # facet fields
         self._doc_value_fields = doc_value_fields
         # merge lock - only one merge at once
@@ -59,7 +58,7 @@ class Index:
             del state['_write_lock']
             del state['_merge_lock']
             del state['_segment_update_lock']
-            del state['_vector_model']
+            #del state['_vector_model']
             pickle.dump(state, index_file)
             print("OK")
 
@@ -230,7 +229,7 @@ class Index:
         except Exception as e:
             raise SearchException(f"Unexpected exception during querying - {e}")
 
-    def get_term(self, term, with_positions=True):
+    def get_term(self, term, with_positions=True, with_skips=True):
         # get all the matching docs in all the segments - currently we assume the term is in every segment
         # this should be improved e.g. using a bloom filter or some bit set, inside the segment though -i.e.
         # it should return [] quickly
@@ -238,14 +237,15 @@ class Index:
         self._segment_update_lock.acquire_read()
         if term:
             for segment in self._segments:
-                term_posting = segment.get_term(term, with_positions=with_positions)
+                term_posting = segment.get_term(term, with_positions=with_positions, with_skips=with_skips)
                 if term_posting:
-                    combined_posting.add_term_info(term_posting)
+                    combined_posting.add_term_info(term_posting,update_skips=True)
         self._segment_update_lock.release_read()
         return combined_posting
 
     def get_vector(self, query):
-        return self._vector_model.embedding(query)
+        # return self._vector_model.embedding(query)
+        return []
 
     def has_doc_id(self, field):
         return field in self._doc_value_fields

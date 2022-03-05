@@ -1,9 +1,8 @@
-import ujson as json
 import os.path
 import sys
 import time
 import uuid
-
+import ujson as json
 from search.lock import ReadWriteLock
 from search.posting import TermPosting
 from search.store import Store
@@ -97,13 +96,13 @@ class Segment:
         if doc_id > self._max_doc_id:
             return None
         if doc_id in self._doc_values[field]:
-            return json.loads(self._doc_values[field][doc_id])
+            return self._doc_values[field][doc_id]
         return None
 
     # if with_positions is False we can use the postings file which is a smaller read
-    def get_term(self, term, with_positions=True):
+    def get_term(self, term, with_positions=True, with_skips=True):
         # use the buffer if this is an in memory segment
-        # can't read whilst flushing the buffer - maybe not needed - prevents empty results basically
+        # can't read whilst flushing the bufffer - maybe not needed - prevents empty results basically
         self._flush_lock.acquire_read()
         pos = []
         if not self._is_flushed:
@@ -116,11 +115,13 @@ class Segment:
         # use the disk postings if this has been flushed
         if with_positions:
             if term in self._positions_index:
-                return TermPosting.from_store_format(self._positions_index[term])
+                data = self._positions_index[term]
+                return TermPosting.from_store_format(data, with_skips=with_skips)
         else:
             # this is a cheaper read as postings only
             if term in self._postings_index:
-                return TermPosting.from_store_format(self._postings_index[term], with_positions=False)
+                return TermPosting.from_store_format(self._postings_index[term], with_positions=False,
+                                                     with_skips=with_skips)
 
     # flushed the buffer to disk - this can be called manually and "closes" the segment to additions making it immutable
     def flush(self):
@@ -169,12 +170,14 @@ class Segment:
         self._flush_lock = ReadWriteLock()
         self._indexing_lock = ReadWriteLock()
         # this will load the index off disk
-        print(f"Loading index postings for segment {self._segment_id} from {self._postings_file}...", end="", flush=True)
+        print(f"Loading index postings for segment {self._segment_id} from {self._postings_file}...", end="",
+              flush=True)
         self._postings_index = Store(self._postings_file)
         print("OK")
-        print(f"Loading index positions for segment {self._segment_id} from {self._positions_file}...", end="", flush=True)
-        print("OK")
+        print(f"Loading index positions for segment {self._segment_id} from {self._positions_file}...", end="",
+              flush=True)
         self._positions_index = Store(self._positions_file)
+        print("OK")
         print(f"Index loaded for {self._segment_id}")
         # load the doc values
         self._doc_values = {}
@@ -222,9 +225,9 @@ class Segment:
         min_id_r, max_id_r = r_segment.get_doc_id_range()
         self._min_doc_id = min(min_id_l, min_id_r)
         self._max_doc_id = max(max_id_l, max_id_r)
+        self._merge_doc_ids(l_segment, r_segment)
         self._merge_postings(l_segment, r_segment)
         self._merge_positions(l_segment, r_segment)
-        self._merge_doc_ids(l_segment, r_segment)
 
     def _merge_doc_ids(self, l_segment, r_segment):
         print(f"Merging doc ids into {self._segment_id}...")

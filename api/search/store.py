@@ -24,23 +24,6 @@ class DocumentStore(Lmdb):
         return json.loads(value.decode("utf-8"))
 
 
-def parse_line(line):
-    (left, sep, right) = line.partition(b'\t')
-    term = json.loads(left.decode('utf8'))
-    value = right.decode('utf8')
-    return term, value
-
-
-def parse_key(line):
-    (left, sep, right) = line.partition(b'\t')
-    return json.loads(left.decode('utf8'))
-
-
-def parse_value(line):
-    (left, sep, right) = line.partition(b'\t')
-    return right.decode('utf8')
-
-
 # Our dictionary store on disk. Only thread safe on gets NOT on writes or iteration!
 class Store(dict):
     START_FLAG = b'# FILE-DICT v1\n'
@@ -75,13 +58,26 @@ class Store(dict):
                     self._free_lines.append((len(line), offset))
             else:
                 # let's parse the value as well to be sure the data is ok
-                key = parse_key(line)
+                key = self.parse_key(line)
                 self._offsets[key] = offset
 
             offset += len(line)
 
         self._free_lines.sort()
-        print(f"Created store '{self.path}' with {len(self)} items")
+
+    def parse_line(self, line):
+        (left, sep, right) = line.partition(b'\t')
+        term = json.loads(left)
+        value = right.decode('utf-8').strip()
+        return term, value
+
+    def parse_key(self, line):
+        (left, sep, right) = line.partition(b'\t')
+        return json.loads(left)
+
+    def parse_value(self, line):
+        (left, sep, right) = line.partition(b'\t')
+        return right.decode('utf-8').strip()
 
     def _freeLine(self, offset):
         self._file.seek(offset)
@@ -111,7 +107,7 @@ class Store(dict):
         with open(self.path, 'r+b') as reader:
             reader.seek(offset)
             line = reader.readline()
-            return parse_value(line)
+            return self.parse_value(line)
 
     def __setitem__(self, key, value):
         if key in self._offsets:
@@ -130,7 +126,7 @@ class Store(dict):
         if line[-1] == 35:
             # if it ends with a "comment" (bytes to recycle),
             # let's be clean and avoid cutting unicode chars in the middle
-            while self._file.peek(1)[0] & 0x80 == 0x80:  # it's a continuation byte
+            while self._file.peek(1)[0] & 0x80 == 0x80:  # ist's a continuation byte
                 self._file.write(b'.')
         self._file.flush()
         # now that everything has been written...
@@ -175,7 +171,7 @@ class Store(dict):
             # ignore empty and commented lines
             if line == b'\n' or line[0] == 35:
                 continue
-            yield parse_line(line)
+            yield self.parse_line(line)
 
     def __iter__(self):
         return iter(self.items())
@@ -245,27 +241,3 @@ class List(list):
 
     def close(self):
         self._dict.close()
-
-
-def load(path):
-    file = open(path, 'rb')
-    first = file.readline()
-
-    if first == Store.START_FLAG:
-        file.close()
-        return Store(path)
-    if first == List.START_FLAG:
-        file.close()
-        return List(path)
-
-    for line in file:
-        if line[0] == 0x23:
-            continue
-        key = parse_key(line)
-        if isinstance(key, int):
-            file.close()
-            return List(path)
-        else:
-            file.close()
-            return Store(path)
-    raise Exception("Empty collection without header. Cannot determine whether it is a list or a dict.")

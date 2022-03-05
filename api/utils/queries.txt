@@ -1,15 +1,15 @@
 the who,0
 "the who",0
 the theory of relativity,145598
-"the theory of relativity",56954
+"the theory of relativity",1232
 "charge density",4427
 "point spread",2440
 field,116158
 general relativity,177022
 hubble AND space,5835
 power AND law,32214
-"learning computer vision",2909
-"graph representation learning",2979
+"learning computer vision",2758
+"graph representation learning",1793
 active AND galactic AND nucleus,1362
 mock AND theta AND functions,119
 phys rev lett,74495
@@ -17,7 +17,7 @@ optimal control,133430
 single AND layer,56188
 star AND forming AND galaxies,7440
 time AND series AND forecasting,6738
-"prove existence uniqueness",6569
+"prove existence uniqueness",3657
 neutrinoless AND double,430
 NOT chain,144849
 proper AND orthogonal AND decomposition,4810
@@ -27,7 +27,7 @@ recurrent AND neural AND network,16470
 "star forming",4035
 predictive AND control,59143
 hamilton AND jacobi,1716
-"numerical experiments demonstrate",5440
+"numerical experiments demonstrate",854
 based AND machine,70098
 pre trained,83277
 probability density,119062
@@ -36,7 +36,7 @@ hubble space,139440
 ab initio,98365
 extensive AND experimental,45230
 quantum phase,95279
-"computed tomography ct",682
+"computed tomography ct",200
 open AND quantum AND systems,23086
 "proposed method",28105
 charge AND density,23131
@@ -47,22 +47,22 @@ time AND reversal AND symmetry,13408
 equations,110539
 component analysis,162391
 condensed AND matter AND physics,14721
-"current state art",7580
+"current state art",7173
 multiple,117548
 gravitational AND wave,10311
 maximum AND likelihood AND estimation,17271
 short AND term,65645
 monte carlo simulation,92602
-"artificial intelligence ai",11856
+"artificial intelligence ai",745
 magnitude,55925
 mock AND theta,119
 machine learning,87580
 series,80996
 "inelastic neutron",613
-"point spread function",2426
+"point spread function",2172
 core AND collapse,6796
 based AND deep,65581
-"agreement experimental data",3216
+"agreement experimental data",2397
 multi AND armed AND bandit,1377
 time,158883
 von,20535
@@ -75,15 +75,15 @@ unmanned AND aerial,2037
 star AND formation AND activity,7570
 pre trained models,158143
 input AND multiple AND output,52375
-"state art approaches",40772
-"low rank matrix",4366
+"state art approaches",3088
+"low rank matrix",1500
 deep learning,92214
 "optical coherence",933
 methods,151872
 NOT key,80925
 NOT learning,101914
 play AND crucial,28245
-"noisy intermediate scale",940
+"noisy intermediate scale",916
 uda,826
 future research,156471
 "results show",46797
@@ -109,9 +109,9 @@ achieving state,165487
 "aerial vehicles",2142
 decomposition,40728
 graph structured,146332
-"multi label classification",2495
+"multi label classification",1271
 density AND functional,75423
-"neural network cnn",21688
+"neural network cnn",10248
 light matter,94723
 coronal AND mass,1458
 "code https",6036
@@ -122,7 +122,7 @@ neural AND networks,55839
 state,151466
 gamma AND ray AND bursts,1921
 deep AND learning AND methods,52957
-"signal noise ratio",12194
+"signal noise ratio",10657
 static spherically,45966
 mass AND loss,23946
 variational AND autoencoder,6837
@@ -143,10 +143,10 @@ periodic AND boundary,27780
 "quark gluon",2376
 extensive,96282
 background,60233
-"convex optimization problem",6648
+"convex optimization problem",5107
 neural machine translation,108345
-"plays important role",19945
-"orders magnitude faster",9986
+"plays important role",19662
+"orders magnitude faster",1411
 ml,10543
 address issue propose,156834
 random matrix,124848
@@ -156,7 +156,7 @@ van AND der,26006
 predictive,100066
 rashba spin,31026
 adversarial,21383
-"star forming galaxies",3244
+"star forming galaxies",1544
 "multiple input",2645
 double,45837
 vector machine,129458
@@ -191,7 +191,7 @@ strength,43083
 state AND art,50383
 bose einstein,17373
 neural,59261
-"simulation results show",15276
+"simulation results show",5945
 NOT learning,101914
 play AND crucial,28245
 surfaces,57874
@@ -199,7 +199,7 @@ black AND box,23361
 massive machine,88101
 chain AND monte,8972
 cosmic microwave background,66808
-"machine learning approach",50812
+"machine learning approach",13227
 show,172789
 neural AND network,55839
 machine AND learning AND approaches,59187
@@ -207,7 +207,7 @@ network,85600
 "proposed approach",15910
 results,178734
 large AND scale AND datasets,48595
-"real world datasets",21614
+"real world datasets",3927
 show proposed,177345
 simulation,82708
 "based deep",7024
@@ -238,7 +238,7 @@ deep AND learning AND framework,40710
 large,150390
 deep AND learning,54462
 functional,163606
-"semi supervised learning",8290
+"semi supervised learning",5163
 experimental results,179245
 gravitational,18596
 numerical AND experiments AND demonstrate,40333
@@ -248,7 +248,7 @@ telescope,12914
 "primordial magnetic fields",192
 dark AND matter,14854
 method AND multipliers AND admm,1034
-"region parameter space",3372
+"region parameter space",2832
 extensive AND experiments,59889
 deep AND inelastic AND scattering,1527
 functional theory,172286
@@ -262,14 +262,14 @@ reproducing AND kernel,9829
 experimental,84981
 rm AND km AND rm,1543
 machine learning ml,88301
-"term memory lstm",5650
+"term memory lstm",3108
 dark,25007
 "orbital angular",2789
 NOT neural,121927
 plays AND crucial,28245
 graph AND convolutional AND network,15476
 low AND energy AND effective,57800
-"cyber physical systems",2230
+"cyber physical systems",1826
 data driven,142384
 deep,67402
 star forming galaxies,152207
@@ -278,11 +278,11 @@ plays AND important,60128
 NOT time,22305
 experimental AND results AND real,55542
 "financial time",690
-"data driven approach",13214
+"data driven approach",3133
 results AND demonstrate AND proposed,77364
-"extensive experiments demonstrate",6876
+"extensive experiments demonstrate",1863
 language,42392
-"machine learning model",52798
+"machine learning model",20562
 achieving AND state,97373
 social AND media AND platforms,4499
 relativistic AND heavy AND ion,2054
@@ -292,9 +292,9 @@ massive machine type,149600
 cosmic AND microwave,3288
 alternating AND direction,66871
 show AND method,145954
-"real world data",29072
-"real world networks",26079
-"future research directions",12215
+"real world data",3693
+"real world networks",1005
+"future research directions",3878
 play AND crucial,28245
 "log log log",19670
 proposed AND approach AND outperforms,35422
@@ -317,7 +317,7 @@ systems,153254
 news AND detection,6674
 binary black,89525
 "artificial neural",6820
-"proton proton collisions",1665
+"proton proton collisions",1421
 transition AND metal AND dichalcogenides,1662
 state,151466
 machine AND learning,63074
@@ -326,14 +326,14 @@ electron AND electron,60197
 plays,71190
 supervised,32869
 learning,79274
-"things iot devices",2115
+"things iot devices",1237
 visual question answering,111225
 state AND art,50383
 demonstrate AND proposed AND method,72189
 star,26855
 machine,71380
 reinforcement learning drl,82218
-"ab initio calculations",2040
+"ab initio calculations",891
 interference noise,66586
 NOT world,121114
 real world,123804
@@ -379,13 +379,13 @@ heavy AND ion AND collisions,2648
 prove existence,149929
 NOT interaction,93332
 NOT neural,121927
-"large scale datasets",29867
+"large scale datasets",4886
 pre AND trained AND models,34206
 metal,21764
 traditional,38036
 direction AND method,115070
 order AND phase AND transition,38818
-"large scale dataset",29867
+"large scale dataset",4886
 monte AND carlo AND mcmc,3836
 mass loss,122557
 deep AND learning,54462
@@ -410,10 +410,10 @@ computer,153404
 simulation results,179246
 learning AND based AND approaches,72142
 numerical results,179321
-"conformal field theory",2357
+"conformal field theory",2319
 conducted,64164
 channel AND state,40457
-"microwave background cmb",2136
+"microwave background cmb",1686
 deep AND learning,54462
 ordinary AND differential,11970
 quantum,45565
@@ -421,14 +421,14 @@ noise AND ratio AND snr,6088
 "recurrent neural",11177
 "reconfigurable intelligent",657
 "magnetic resonance",4167
-"graph representation learning",2979
+"graph representation learning",1793
 natural language processing,171382
 bethe AND salpeter AND equation,591
-"show proposed algorithm",8270
+"show proposed algorithm",2262
 "numerical results",17101
 recurrent AND neural AND network,16470
 chain AND monte,8972
-"data driven approach",13214
+"data driven approach",3133
 small,135134
 scanning AND tunneling AND microscopy,1543
 "pierre auger",256
@@ -445,14 +445,14 @@ real AND world AND networks,35533
 convolutional neural,68521
 light AND matter,29350
 convolutional AND neural AND network,34008
-"prove existence uniqueness",6569
+"prove existence uniqueness",3657
 pre,55143
 numerical,90296
 "reconfigurable intelligent",657
 "intermediate scale",1587
-"black hole binary",3941
+"black hole binary",992
 hyper AND suprime AND cam,329
-"pre trained models",20099
+"pre trained models",13945
 machine learning algorithms,116080
 demonstrate AND effectiveness,90057
 signal AND interference AND noise,7546
@@ -465,13 +465,13 @@ primordial magnetic fields,119380
 anomalous hall effect,146444
 "optical coherence",933
 direction AND method,115070
-"inert doublet model",126
+"inert doublet model",113
 deep AND learning AND methods,52957
 supervised learning method,156331
 high AND resolution AND images,30628
 fault AND tolerant AND quantum,1667
 term memory,154386
-"high dimensional data",16069
+"high dimensional data",3745
 multiple access,133576
 light AND matter AND interaction,21758
 deep AND learning AND framework,40710
@@ -481,7 +481,7 @@ models,154353
 "dark matter",7500
 "resolved photoemission",978
 light matter interaction,125124
-"publicly https github",1731
+"publicly https github",1675
 NOT neural,121927
 unsupervised domain adaptation,115447
 graph neural network,107079
@@ -491,12 +491,12 @@ dark AND matter,14854
 deep learning,92214
 "synthetic real",2377
 proposed,121339
-"riemann zeta function",962
+"riemann zeta function",943
 edge,57567
 NOT time,22305
 moriya,1292
 reinforcement AND learning AND drl,1154
-"neural network architectures",37312
+"neural network architectures",14894
 signal interference noise,93316
 "machine learning",54024
 schr odinger,1481
@@ -515,12 +515,12 @@ al phys,76300
 "reduced order",2940
 small magellanic,135224
 attracted AND considerable AND attention,9047
-"extensive experiments show",7643
+"extensive experiments show",2293
 orders magnitude,160618
 orbit,27651
-"star forming regions",3854
-"unmanned aerial vehicle",1862
-"real world problems",28004
+"star forming regions",1690
+"unmanned aerial vehicle",1810
+"real world problems",1975
 rl,3361
 direction AND method,115070
 electronic AND health AND records,3642
@@ -534,7 +534,7 @@ dynamic mode,115025
 fold AND cross AND validation,9712
 dynamic AND mode AND decomposition,8569
 generative adversarial,174897
-"point spread function",2426
+"point spread function",2172
 finite AND element,53824
 uniform,58113
 reinforcement learning drl,82218
@@ -550,8 +550,8 @@ paper propose,167573
 NOT world,121114
 component AND analysis AND pca,4946
 multiple AND input,68095
-"multi agent systems",4486
-"existing state art",1964
+"multi agent systems",2097
+"existing state art",1905
 magnetic,32527
 NOT gas,154370
 "data driven",13744
@@ -563,11 +563,11 @@ density AND functional AND theory,55303
 rm km,14710
 medical AND image AND segmentation,7773
 extensive experiments,146863
-"play key role",6149
+"play key role",6057
 "simulation results",15655
 anomalous AND hall AND effect,3955
 "extensive experimental",1979
-"state art deep",32204
+"state art deep",1385
 topological AND edge,11737
 general AND relativity,81571
 deep learning approach,154903
@@ -578,29 +578,29 @@ mpc,6749
 play AND crucial AND role,26079
 machine AND learning,63074
 conduct AND extensive AND experiments,30176
-"method multipliers admm",876
+"method multipliers admm",667
 learning computer,155928
 social,22083
 long short,125686
-"black hole mass",8404
+"black hole mass",2022
 anti AND de,8331
 data machine,140725
 inelastic AND neutron,1689
 transmission electron microscopy,71300
 method AND multipliers,38666
 reduced order,171788
-"extensive experimental results",1977
-"spectral energy distribution",2992
+"extensive experimental results",1346
+"spectral energy distribution",2489
 ct,3547
 play AND important AND role,54558
 neural networks,89022
-"real world data",29072
+"real world data",3693
 nlp,9516
-"static spherically symmetric",864
+"static spherically symmetric",846
 NOT interactions,93332
 multi AND armed AND bandit,1377
-"alternating direction method",1735
-"extensive experiments real",6293
+"alternating direction method",1184
+"extensive experiments real",796
 fold AND cross AND validation,9712
 "potential energy",6204
 double beta decay,81308
@@ -609,7 +609,7 @@ achieved AND state,97373
 code AND https AND github,28822
 proposed,121339
 visual question answering,111225
-"plays important role",19945
+"plays important role",19662
 "play key",6198
 finite element methods,173024
 source,88274
@@ -622,8 +622,8 @@ black hole,68225
 automatic AND speech AND recognition,6916
 NOT domain,100380
 carlo,31156
-"deep reinforcement learning",6296
-"neural network architecture",37312
+"deep reinforcement learning",6227
+"neural network architecture",14894
 "potential energy",6204
 waals,3761
 "high resolution",16978
@@ -636,7 +636,7 @@ lambda AND cdm AND model,767
 numerical AND experiments AND demonstrate,40333
 quantum AND key AND distribution,15121
 extensive AND experimental,45230
-"deep learning model",38556
+"deep learning model",17836
 experiments benchmark,115855
 agent AND reinforcement,7949
 achieves AND state AND art,42179
@@ -646,11 +646,11 @@ generative adversarial networks,176633
 bose AND einstein AND condensates,2728
 deep,67402
 hubble space telescope,140465
-"point spread function",2426
+"point spread function",2172
 real world,123804
 "long short",10327
 "mobile edge",1344
-"gamma ray bursts",1793
+"gamma ray bursts",1473
 central AND limit,50446
 quantum monte,62415
 large AND scale AND structure,90249
@@ -669,9 +669,9 @@ pre AND trained,34558
 condensed AND matter AND physics,14721
 dynamic AND mode AND decomposition,8569
 publicly AND https,17518
-"deep neural networks",24369
+"deep neural networks",24321
 adversarial AND machine AND learning,18140
-"quantum information processing",7052
+"quantum information processing",3221
 synthetic real world,127769
 state art,153291
 carlo,31156
@@ -688,9 +688,9 @@ find AND good AND agreement,27164
 "black hole",10039
 internet AND things,7281
 "strong magnetic",2563
-"high dimensional data",16069
+"high dimensional data",3745
 closed form,166293
-"convolutional neural network",24464
+"convolutional neural network",24445
 plays,71190
 maximum likelihood,100961
 molecular AND beam AND epitaxy,1123
@@ -706,9 +706,9 @@ predictive AND control AND mpc,2696
 topological AND edge,11737
 state,151466
 model,154353
-"energy momentum tensor",3416
+"energy momentum tensor",2420
 "periodic boundary",6949
-"generative adversarial network",10842
+"generative adversarial network",8736
 inert AND doublet AND model,300
 NOT dichalcogenides,179504
 "term memory",7522
@@ -734,7 +734,7 @@ inert doublet model,154761
 supernovae,5571
 data AND machine AND learning,60332
 extensive AND experiments,59889
-"domain adaptation uda",496
+"domain adaptation uda",423
 principal AND component AND analysis,14783
 machine AND learning,63074
 multiple,117548
@@ -751,7 +751,7 @@ learning AND based AND approach,72142
 pierre AND auger,318
 "propose data",2128
 learning,79274
-"probability density function",11103
+"probability density function",7619
 natural AND language AND processing,33268
 machine AND learning,63074
 "state art",43428
@@ -766,7 +766,7 @@ unmanned aerial vehicles,14238
 large AND hadron AND collider,3607
 based,161133
 ultra,13847
-"neural networks cnn",21688
+"neural networks cnn",10248
 large AND magellanic AND cloud,1358
 survey AND satellite,5375
 energy AND momentum,29068
@@ -789,7 +789,7 @@ riemann,8516
 deep AND learning,54462
 "conformal field",2365
 deep,67402
-"method outperforms state",6327
+"method outperforms state",1718
 state AND art,50383
 tensor,33482
 bethe AND salpeter AND equation,591
@@ -818,7 +818,7 @@ particle AND swarm AND optimization,1807
 orthogonal AND multiple AND access,9494
 massive AND multiple,19245
 "light matter",1899
-"partial differential equations",11914
+"partial differential equations",11546
 cloud,22832
 effective AND field,96662
 learning based,162692
@@ -827,11 +827,11 @@ multi AND armed,7838
 extensive AND experiments,59889
 learning AND based,77715
 predictive AND control,59143
-"standard model sm",1193
-"real world applications",28389
+"standard model sm",296
+"real world applications",6877
 input AND multiple AND output,52375
 epitaxy,2599
-"central limit theorem",3198
+"central limit theorem",3147
 plays AND important AND role,54558
 deep AND reinforcement AND learning,13800
 condensed AND matter,15045
@@ -868,7 +868,7 @@ probability AND density,40468
 named entity,39161
 "star formation",4537
 black AND box,23361
-"noisy intermediate scale",940
+"noisy intermediate scale",916
 financial AND time AND series,11499
 deep AND learning AND algorithms,44522
 zeta,2775
@@ -877,14 +877,14 @@ learning AND based AND approach,72142
 federated learning,86058
 nonlinear AND schr AND odinger,551
 "massive multiple",515
-"star formation rate",3826
+"star formation rate",2208
 NOT network,95588
 auger,1397
-"transition metal dichalcogenides",1619
+"transition metal dichalcogenides",1594
 cyber AND physical,3554
 data,136001
 variational AND autoencoder AND vae,2560
-"massive multiple input",498
+"massive multiple input",475
 NOT graph,128567
 spectral AND energy AND distribution,21027
 "charge density",4427
@@ -899,11 +899,11 @@ monte,23520
 "upper lower",11770
 deep AND convolutional,34724
 primordial black holes,69180
-"neural network cnn",21688
+"neural network cnn",10248
 "gaussian process",6238
 agent AND reinforcement,7949
 navier stokes,8240
-"machine learning model",52798
+"machine learning model",20562
 mixed AND integer AND linear,11760
 play significant,126180
 unmanned AND aerial AND vehicles,1989
@@ -920,11 +920,11 @@ noise ratio,101583
 finite element,125742
 "achieving state",7871
 experiments,110470
-"state art performance",42107
+"state art performance",6665
 open quantum,116191
 domain AND adaptation AND uda,587
 yang mills theory,147464
-"decision making process",11346
+"decision making process",2310
 "deep learning",38966
 machine learning,87580
 unmanned AND aerial AND vehicle,1989
@@ -939,7 +939,7 @@ history,28039
 region,90040
 news AND detection,6674
 art,52208
-"natural language understanding",13926
+"natural language understanding",7293
 direction,134874
 neural networks,89022
 automatic AND speech,8961
@@ -950,10 +950,10 @@ NOT methods,29316
 "show method",7543
 black AND box,23361
 demonstrate effectiveness proposed,163283
-"magnetic field strength",10350
+"magnetic field strength",4343
 "bose einstein",2961
 neural network architecture,93809
-"angle resolved photoemission",967
+"angle resolved photoemission",911
 machine AND learning,63074
 neural AND network,55839
 based reinforcement,161481
@@ -966,9 +966,9 @@ automatic speech,57863
 news detection,83272
 inelastic AND neutron,1689
 achieve AND state,97373
-"bethe salpeter equation",564
+"bethe salpeter equation",425
 future AND research,86735
-"massive multiple input",498
+"massive multiple input",475
 machine AND learning AND deep,46967
 transiting,65385
 NOT making,38561
@@ -980,7 +980,7 @@ NOT chain,144849
 polynomial AND time,32822
 "primordial black",777
 neural AND network AND models,55033
-"neural networks cnns",21688
+"neural networks cnns",10248
 electronic AND health AND records,3642
 based AND deep,65581
 pb AND pb,2848
@@ -992,7 +992,7 @@ show proposed,177345
 bursts,6140
 plays AND important,60128
 results AND demonstrate,100285
-"experimental results show",29127
+"experimental results show",13163
 machine type,144690
 von neumann algebras,60278
 lower AND upper AND bounds,43329
