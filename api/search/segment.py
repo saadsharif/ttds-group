@@ -96,7 +96,7 @@ class Segment:
         if doc_id > self._max_doc_id:
             return None
         if doc_id in self._doc_values[field]:
-            return self._doc_values[field][doc_id]
+            return json.loads(self._doc_values[field][doc_id])
         return None
 
     # if with_positions is False we can use the postings file which is a smaller read

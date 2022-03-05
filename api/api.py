@@ -13,7 +13,7 @@ from models.search import SearchSchema
 
 # single global of our index
 from search.analyzer import Analyzer
-from search.exception import IndexException
+from search.exception import IndexException, StoreException, MergeException, SearchException
 from search.index import Index
 from search.utils import load_stop_words
 
@@ -61,6 +61,11 @@ def search():
         # TODO: Pass the request to API and marshall the responses
     except ValidationError as e:
         return jsonify(APIErrorSchema().dump(APIError('unable to parse search request', e.messages))), 400
+    except SearchException as se:
+        return jsonify(APIErrorSchema().dump(APIError('unable to execute search', se.messages))), 400
+    except Exception as ue:
+        return jsonify(
+            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', ue.messages))), 400
 
 
 @app.route('/index', methods=['POST'])
@@ -77,6 +82,11 @@ def index_doc():
         return jsonify(APIErrorSchema().dump(APIError('unable to parse index request', e.messages))), 400
     except IndexException as ie:
         return jsonify(APIErrorSchema().dump(APIError('unable to index index document', {'index': ie.message}))), 400
+    except StoreException as se:
+        return jsonify(APIErrorSchema().dump(APIError('unable to persist documents', {'index': se.message}))), 400
+    except Exception as ue:
+        return jsonify(
+            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', ue.messages))), 400
 
 
 @app.route('/bulk_index', methods=['POST'])
@@ -107,25 +117,42 @@ def bulk_index():
             'failures': failures,
         }), 200
     except IndexException as ie:
-        return jsonify(APIErrorSchema().dump(APIError('unable to index index documents', {'index': ie.message}))), 400
+        return jsonify(APIErrorSchema().dump(APIError('unable to index documents', {'index': ie.message}))), 400
+    except StoreException as se:
+        return jsonify(APIErrorSchema().dump(APIError('unable to persist documents', {'index': se.message}))), 400
+    except Exception as ue:
+        return jsonify(
+            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', ue.messages))), 400
 
 
 # this saves the current index segment in memory to disk - it causes internal indexing and querying to be locked.
 # Don't Call unless you really need! Segments are automatically saved to disk anyway
 @app.route('/flush', methods=['POST', 'GET'])
 def flush():
-    index.save()
-    return jsonify({'ok': True}), 200
+    try:
+        index.save()
+        return jsonify({'ok': True}), 200
+    except StoreException as se:
+        return jsonify(APIErrorSchema().dump(APIError('unable to persist documents', {'index': se.message}))), 400
+    except Exception as ue:
+        return jsonify(
+            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', ue.messages))), 400
 
 
 # selects two segments (smallest and flushed) and merges them together
 @app.route('/optimize', methods=['POST', 'GET'])
 def optimize():
-    before, after = index.optimize()
-    return jsonify({'ok': True, "segments": {
-        "before": before,
-        "after": after
-    }}), 200
+    try:
+        before, after = index.optimize()
+        return jsonify({'ok': True, "segments": {
+            "before": before,
+            "after": after
+        }}), 200
+    except MergeException as se:
+        return jsonify(APIErrorSchema().dump(APIError('unable to merge segments', {'index': se.message}))), 400
+    except Exception as ue:
+        return jsonify(
+            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', ue.messages))), 400
 
 
 def on_exit_api():

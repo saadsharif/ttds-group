@@ -257,7 +257,7 @@ class Index:
         if field in self._doc_value_fields:
             # once we find the segment we can break
             for segment in self._segments:
-                values = json.loads(segment.get_doc_values(field, doc_id))
+                values = segment.get_doc_values(field, doc_id)
                 if values is not None:
                     break
         self._segment_update_lock.release_read()
