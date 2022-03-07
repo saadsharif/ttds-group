@@ -331,10 +331,12 @@ class Query:
         # we would add pagination here
         if score and len(docs) > 0:
             # if we have an offset we need offset + max_results
-            sorted_docs = heapq.nlargest(max_results + offset, docs, key=lambda doc: doc.score)
             if vector_score == 0:
+                sorted_docs = heapq.nlargest(max_results + offset, docs, key=lambda doc: doc.score)
                 return sorted_docs[offset:offset + max_results], facet_values, len(docs)
             else:
+                # for re-scoring we need the full sorted list
+                sorted_docs = heapq.nlargest(len(docs), docs, key=lambda doc: doc.score)
                 max_score = sorted_docs[0].score
                 # TODO: improve this as it includes boolean operators potentially
                 query_string = query.lower()
