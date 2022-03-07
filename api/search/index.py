@@ -5,6 +5,7 @@ import time
 import uuid
 from bidict import bidict
 from search.analyzer import Analyzer
+from search.bert import BERTModule
 from search.exception import IndexException, SearchException, MergeException
 from search.lock import ReadWriteLock
 from search.models import Result
@@ -38,13 +39,15 @@ class Index:
         # used to ensure single threaded indexing
         self._write_lock = ReadWriteLock()
         # bert model for vectors
-        # self._vector_model = BERTModule()
+        self._vector_model = BERTModule(vmodel=3)
         # facet fields
         self._doc_value_fields = doc_value_fields
         # merge lock - only one merge at once
         self._merge_lock = ReadWriteLock()
         # merge update - this is used when we update the list of segments post merge - reads can't occur during this
         self._segment_update_lock = ReadWriteLock()
+        # vector store
+        self._vector_store = DocumentStore.open(os.path.join(self._storage_path, 'vectors.db'), 'c')
 
     def _get_db_path(self):
         return os.path.join(self._storage_path, 'index.idb')
@@ -56,6 +59,7 @@ class Index:
             state = self.__dict__.copy()
             # we don't store the doc store
             del state['_doc_store']
+            del state['_vector_store']
             del state['_write_lock']
             del state['_merge_lock']
             del state['_segment_update_lock']
@@ -69,6 +73,9 @@ class Index:
         self._write_lock.acquire_write()
         print(f"Syncing document store...", end="")
         self._doc_store.sync()
+        print("OK")
+        print(f"Syncing vector store...", end="")
+        self._vector_store.sync()
         print("OK")
         self._store_index_meta()
         if len(self._segments) > 0:
@@ -98,6 +105,7 @@ class Index:
             segment.close()
         print("OK")
         self._doc_store.close()
+        self._vector_store.close()
 
     # theoretically merges segments together to avoid too many files -
     # really an optimisation if we needed as non-trivial
@@ -157,8 +165,11 @@ class Index:
                                         document.fields[field]]
             terms = doc_value_terms + terms
             self.__get_writeable_segment().add_document(self._current_doc_id, terms, doc_values=doc_values)
-            # persist to the bd
+            # persist to the db
             self._doc_store[str(self._current_doc_id)] = document.fields
+            # persist vector
+            if len(document.vector) > 0:
+                self._doc_store[str(self._current_doc_id)] = document.vector
             doc_id = self._current_doc_id
             self._current_doc_id += 1
             self._write_lock.release_write()
@@ -183,6 +194,7 @@ class Index:
                     docs_to_index.append(document)
             # this could be more efficient - i.e. we could optimise bulk additions - less locking and large write chunks
             doc_batch = {}
+            vector_batch = {}
             for document in docs_to_index:
                 self._id_mappings[self._current_doc_id] = document.id
                 terms = self.analyzer.process_document(document)
@@ -199,9 +211,14 @@ class Index:
                 self.__get_writeable_segment().add_document(self._current_doc_id, terms, doc_values=doc_values)
                 doc_ids.append((document.id, self._current_doc_id))
                 doc_batch[str(self._current_doc_id)] = document.fields
+                if len(document.vector) > 0:
+                    vector_batch[str(self._current_doc_id)] = document.vector
                 self._current_doc_id += 1
             # persists the batch to the db
             self._doc_store.update(doc_batch)
+            # persists the vectors
+            if len(vector_batch) > 0:
+                self._vector_store.update(vector_batch)
             self._write_lock.release_write()
         except Exception as e:
             self._write_lock.release_write()
@@ -212,6 +229,10 @@ class Index:
         doc = self._doc_store.get(str(id))
         return {field: doc[field] for field in fields if field in doc}
 
+    def get_document_vector(self, id):
+        vector = self._vector_store.get(str(id))
+        return [] if vector is None else vector
+
     def search(self, query):
         # filters are currently appended as an AND phrase - this isn't ideal but these doc value fields are also indexed
         try:
@@ -220,7 +241,7 @@ class Index:
             for filter in filters:
                 query_text = f"{query_text} AND {filter}"
             docs, facets, total = Query(self).execute(query_text, query.score, query.max_results, query.offset,
-                                                      query.facets)
+                                                      query.facets, vector_score=query.vector_score)
 
             fields = set(query.fields)
             return [Result(self._id_mappings[doc.doc_id], doc.score, fields=self._get_document(str(doc.doc_id), fields))
@@ -245,8 +266,7 @@ class Index:
         return combined_posting
 
     def get_vector(self, query):
-        # return self._vector_model.embedding(query)
-        return []
+        return self._vector_model.embed(query, sentwise=False)
 
     def has_doc_id(self, field):
         return field in self._doc_value_fields

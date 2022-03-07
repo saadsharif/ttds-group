@@ -9,9 +9,10 @@ class Result:
 
 
 class Document:
-    def __init__(self, id, fields):
+    def __init__(self, id, fields, vector=[]):
         self.id = id
         self.fields = fields
+        self.vector = vector
 
     def __str__(self):
         values = []
@@ -32,7 +33,7 @@ class Document:
 
 
 class Search:
-    def __init__(self, query, score, max_results, offset, fields=[], facets=[], filters=[]):
+    def __init__(self, query, score, max_results, offset, fields=[], facets=[], filters=[], vector_score=0):
         self.query = query
         self.score = score
         self.filters = filters
@@ -40,6 +41,7 @@ class Search:
         self.fields = fields
         self.max_results = max_results
         self.offset = offset
+        self.vector_score = vector_score
 
 
 class Facet:

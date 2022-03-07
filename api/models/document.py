@@ -10,6 +10,7 @@ class DocumentSchema(Schema):
     abstract = fields.Str(required=True)
     subject = fields.List(fields.Str(), default=[], missing=[], required=False)
     body = fields.Str(required=False, allow_none=True)
+    vector = fields.List(fields.Float(), default=[], missing=[], required=False)
 
     @post_load
     def make_document(self, data, **kwargs):
@@ -19,7 +20,7 @@ class DocumentSchema(Schema):
             'abstract': data['abstract'],
             'subject': data['subject'],
             'body': '' if data['body'] is None else data['body']
-        })
+        }, vector=data['vector'])
 
     @post_dump
     def null_to_empty_string(self, data):

@@ -25,6 +25,7 @@ class FilterSchema(Schema):
 class SearchSchema(Schema):
     query = fields.Str(required=True)
     max_results = fields.Int(default=10, missing=10)
+    vector_score = fields.Int(default=0, missing=0)
     offset = fields.Int(default=0, missing=0, validate=Range(min=0, error="Value must be greater or equal to 0"))
     score = fields.Boolean(default=True, missing=True)
     iFields = fields.List(fields.Str(), default=[], missing=[], data_key="fields")
@@ -34,4 +35,4 @@ class SearchSchema(Schema):
     @post_load
     def make_search(self, data, **kwargs):
         return Search(data['query'], data['score'], data['max_results'], data['offset'], data['iFields'],
-                      data['facets'], data['filters'])
+                      data['facets'], data['filters'], vector_score=data['vector_score'])
