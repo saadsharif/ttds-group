@@ -34,7 +34,7 @@ const Tag = styled.span`
 
 const Result = ({ result }) => {
   const { title, authors, abstract, subject} = result.fields.raw;
-  const tags = [subject.split('(')[0], subject.split('(')[1].slice(0, -1)];
+  const tags = [subject];
   return(
     <StyledResult>
       <h3>{title}</h3>

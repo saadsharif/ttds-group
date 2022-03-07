@@ -2,7 +2,20 @@ import React from 'react';
 import styled from 'styled-components/macro';
 import { SearchBox } from '@elastic/react-search-ui';
 
-const StyledSearchBar = styled(SearchBox)`
+const unstyledSearchBar = () => (
+  <SearchBox
+    // autocompleteResults={{
+    //   sectionTitle: "Suggested Results",
+    //   titleField: "title",
+    //   urlField: "nps_link"
+    // }}
+    autocompleteSuggestions={{
+      sectionTitle: "Suggested Queries",
+    }}
+  />
+);
+
+const StyledSearchBar = styled(unstyledSearchBar)`
   border-radius: 10px;
   overflow: hidden;
   width: 100%;

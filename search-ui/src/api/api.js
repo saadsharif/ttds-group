@@ -1,21 +1,22 @@
 import axios from 'axios';
 
-const endpoint = 'search';
+const searchEndpoint = 'search';
+const suggestEndpoint = 'suggest';
 
 const getYears = (hits) => {
   const ret = {};
-  hits.forEach(hit => {
-    const [month, year] = hit.id.split(':')[1].split('.')[0].match(/.{2}/g);
-    const yearKey = `${month}/${year}`;
-    if (yearKey in ret) { ret[yearKey] += 1 } else { ret[yearKey] = 1 }
-  });
+  // hits.forEach(hit => {
+  //   const [month, year] = hit.id.split(':')[1].split('.')[0].match(/.{2}/g);
+  //   const yearKey = `${month}/${year}`;
+  //   if (yearKey in ret) { ret[yearKey] += 1 } else { ret[yearKey] = 1 }
+  // });
   return ret;
 };
 
 const getTopics = (hits) => {
   const ret = {};
   hits.forEach(hit => {
-    const tag = hit.fields.subject.split('(')[0];
+    const tag = hit.fields.subject;
     if (tag in ret) { ret[tag] += 1 } else { ret[tag] = 1 }
   });
   return ret;
@@ -58,11 +59,11 @@ export default class SearchAPI {
       [key]: value
     });
       
-    return axios.post(endpoint, {
+    return axios.post(searchEndpoint, {
       'query': state.searchTerm,
       'max_results': resultsPerPage,
       'offset': (currentPage - 1) * resultsPerPage,
-      'fields': ['abstract', 'authors', 'subject', 'title']
+      'fields': ['abstract', 'authors', 'subject', 'title', 'body']
     }).then(response =>
       response.data
     ).then(results => ({
@@ -77,6 +78,22 @@ export default class SearchAPI {
     }))
   }
 
-  async onAutocomplete({ searchTerm }, queryConfig) {};
+  async onAutocomplete({ searchTerm }, queryConfig) {
+    console.log("autocompleting")
+    return axios.post(suggestEndpoint, {
+      'query': searchTerm,
+      'max_results': 0,
+    }).then(response =>
+      response.data
+    ).then(results => {
+      console.log(results);
+      const ret = {
+        autocompletedSuggestionsRequestId: results.request_id,
+        autocompletedSuggestions: { 'hits': results.hits.map(e => (e))}
+      };
+      console.log(ret);
+      return ret;
+    });
+  };
 }
 
