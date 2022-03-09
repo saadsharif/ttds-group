@@ -39,18 +39,18 @@ class Analyzer:
         self._stemmer = Stemmer.Stemmer('porter')
         self._tokenizer = re.compile(r'\W+')
 
-    def _process_tokens(self, tokens):
+    def _process_tokens(self, tokens, keepOriginal=False):
         terms = []
         for token in tokens:
             term = self.process_token(token)
             if term:
-                terms.append(term)
+                terms.append((term, token) if keepOriginal else term)
         return terms
 
-    def process(self, text):
+    def process(self, text, keepOriginal=False):
         tokens = self.tokenize(text)
-        return self._process_tokens(tokens)
+        return self._process_tokens(tokens, keepOriginal=keepOriginal)
 
-    def process_document(self, doc):
-        return self.process(str(doc))
+    def process_document(self, doc, keepOriginal=False):
+        return self.process(str(doc), keepOriginal=keepOriginal)
 

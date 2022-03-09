@@ -58,7 +58,7 @@ class Segment:
         return self._max_doc_id - self._min_doc_id
 
     # this adds the document to the buffer only, the flush writes it to disk
-    def add_document(self, doc_id, terms, doc_values={}):
+    def add_document(self, doc_id, terms_and_tokens, doc_values={}):
         # IMPORTANT: we allow only require a lock on indexing - this means indexing could happen during querying. This
         # results in potentially dirty reads (not a big deal). We will be blocked by a flush though - rare!
         self._indexing_lock.acquire_write()
@@ -68,9 +68,9 @@ class Segment:
                 f"Segment {self._segment_id} has been flushed. Attempting to add docs to immutable segments.")
         p = 0
         try:
-            for term in terms:
+            for term, token in terms_and_tokens:
                 if term not in self._buffer:
-                    term_posting = TermPosting()
+                    term_posting = TermPosting(token)
                     self._buffer[term] = term_posting
                 self._buffer[term].add_position(doc_id, p)
                 p += 1

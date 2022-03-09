@@ -125,8 +125,9 @@ class Posting:
 # encapsulates all the information about a term
 class TermPosting:
 
-    def __init__(self, collecting_frequency=0, stop_word=False):
+    def __init__(self, first_occurrence=None, collecting_frequency=0, stop_word=False):
         self._collection_frequency = collecting_frequency
+        self._first_occurrence = first_occurrence
         self.postings = []
         self.skips = []
         self._stop_word = stop_word
@@ -138,6 +139,10 @@ class TermPosting:
             self.postings.append(Posting(doc_id))
         self.postings[-1].add_position(position)
         self._collection_frequency += 1
+
+    @property
+    def first_occurrence(self):
+        return self._first_occurrence
 
     @property
     def is_stop_word(self):

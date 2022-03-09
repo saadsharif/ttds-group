@@ -22,3 +22,16 @@ class ResultsSchema(Schema):
     total_hits = fields.Int()
     facets = fields.Dict()
     request_id = fields.Str()
+
+class Suggestions:
+    def __init__(self, hits):
+        self.hits = hits
+        self.request_id = str(uuid.uuid1())
+
+class SuggestionResultSchema(Schema):
+    suggestion = fields.Str()
+    highlight = fields.Str()
+
+class SuggestionResultsSchema(Schema):
+    hits = fields.Raw()
+    request_id = fields.Str()

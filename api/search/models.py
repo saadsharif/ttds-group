@@ -43,6 +43,10 @@ class Search:
         self.offset = offset
         self.vector_score = vector_score
 
+class SuggestionSearch:
+    def __init__(self, query, max_results):
+        self.query = query
+        self.max_results = max_results
 
 class Facet:
     def __init__(self, field, num_values):

@@ -1,7 +1,7 @@
 from marshmallow import Schema, fields, post_load
 from marshmallow.validate import Range
 
-from search.models import Search, Facet, Filter
+from search.models import Search, SuggestionSearch, Facet, Filter
 
 
 class FacetSchema(Schema):
@@ -36,3 +36,11 @@ class SearchSchema(Schema):
     def make_search(self, data, **kwargs):
         return Search(data['query'], data['score'], data['max_results'], data['offset'], data['iFields'],
                       data['facets'], data['filters'], vector_score=data['vector_score'])
+
+class SuggestionSearchSchema(Schema):
+    query = fields.Str(required=True)
+    max_results = fields.Int(default=10, missing=10)
+
+    @post_load
+    def make_search(self, data, **kwargs):
+        return SuggestionSearch(data['query'], data['max_results'])

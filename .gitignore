@@ -1,2 +1,6 @@
 .idea
-*.json
+all_2021_facets.json
+.vscode/launch.json
+**/*.ndjson
+api/indexMedium
+**/*.prof

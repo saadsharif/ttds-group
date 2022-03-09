@@ -67,8 +67,9 @@ def read(doc_filename, vector_filename, reader):
         yield from reader(doc_filename)
 
 
-def index_batch(url, batch):
-    response = requests.post(url, data="\n".join(batch))
+def index_batch(url, batch, isLast=False):
+    data = ""+str(isLast)+"\n"+"\n".join(batch)
+    response = requests.post(url, data=data)
     if response.status_code != 200:
         print(f"Unable to index - {response.status_code} - {response.text}", flush=True)
         return 0, 0
@@ -117,7 +118,7 @@ for line in read(args.file, args.vector_file, reader):
         batch = []
 if len(batch) > 0:
     start = time.time()
-    success, failure = index_batch(url, batch)
+    success, failure = index_batch(url, batch, isLast=True)
     end = time.time()
     # this might leave us with fewer docs that asked for - if we have failures.
     # Complexity is not worth improving this.

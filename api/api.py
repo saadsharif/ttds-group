@@ -1,6 +1,7 @@
 import atexit
 import ujson as json
 import os
+# import cProfile
 from json import JSONDecodeError
 from flask.json import JSONEncoder
 from flask import Flask, request
@@ -8,8 +9,8 @@ from marshmallow import ValidationError
 
 from models.document import DocumentSchema
 from models.error import APIError, APIErrorSchema
-from models.results import Results, ResultsSchema
-from models.search import SearchSchema
+from models.results import Results, ResultsSchema, Suggestions, SuggestionResultsSchema
+from models.search import SearchSchema, SuggestionSearchSchema
 
 # single global of our index
 from search.analyzer import Analyzer
@@ -17,7 +18,7 @@ from search.exception import IndexException, StoreException, MergeException, Sea
 from search.index import Index
 from search.utils import load_stop_words
 
-index = None
+index: Index = None
 
 
 def load_index():
@@ -51,6 +52,15 @@ def jsonify(data):
         mimetype=app.config["JSONIFY_MIMETYPE"],
     )
 
+@app.route('/suggest', methods=['POST'])
+def suggest():
+    try:
+        hits = index.suggest(SuggestionSearchSchema().load(request.get_json()))
+        results = Suggestions(hits)
+        return jsonify(SuggestionResultsSchema().dump(results)), 200
+        # TODO: Pass the request to API and marshall the responses
+    except ValidationError as e:
+        return jsonify(APIErrorSchema().dump(APIError('unable to parse search request', e.messages))), 400
 
 @app.route('/search', methods=['POST'])
 def search():
@@ -96,7 +106,8 @@ def bulk_index():
         failures = []
         documents = []
         i = 1
-        for line in body.splitlines():
+        # skip first line as used for flush command
+        for line in body.splitlines()[1:]:
             try:
                 doc = DocumentSchema().load(json.loads(line))
                 i += 1
@@ -107,7 +118,7 @@ def bulk_index():
                 failures.append(f"Cannot parse document at line {i}")
             except ValueError as e:
                 failures.append(f"Cannot parse document at line {i}")
-        doc_ids, fails = index.add_documents(documents)
+        doc_ids, fails = index.add_documents(documents, flushTrie=body[0] == "T")
         failures += fails
         return jsonify({
             'docs': [{

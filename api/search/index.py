@@ -3,7 +3,12 @@ import pickle
 import sys
 import time
 import uuid
+import datrie
+# import cProfile
+import copy
+import string
 from bidict import bidict
+from utils.utils import print_progress
 from search.analyzer import Analyzer
 from search.bert import BERTModule
 from search.exception import IndexException, SearchException, MergeException
@@ -30,6 +35,10 @@ class Index:
         self._segments = []
         # we maintain to generate doc ids but use use this for NOT queries
         self._current_doc_id = 1
+        # Trie structure for autocompleting
+        self._trie = datrie.Trie(string.ascii_lowercase)
+        self._old_segment = None
+        self._old_buffer = None
         # mapping of external and internal id - used to ensure we always use an incremental doc id and check external
         # ids are unique - we may want to move this to uniqueness to an external check in the future. For this reason,
         # the dict is bi-directional. internal->external, whilst inverse is external to internal.
@@ -121,8 +130,66 @@ class Index:
     def number_of_docs(self):
         return self.current_id - 1
 
+    def _get_first_unstemmed_occurrence(self, stem, document=None):
+        pos = self.get_term(stem).get_first()
+        if not pos.positions:
+            return None
+        doc = self._get_document(str(pos.doc_id), [])
+        if not doc: doc = document
+        text = ' '.join(str(x) for x in doc.values())
+        terms = [term for term in self.analyzer.tokenize(text) if term.lower() not in self.analyzer._stop_words]
+        doc_value_terms = []
+        for field in self._doc_value_fields:
+            if field in doc:
+                doc_value_terms += [f"{field}:{'_'.join(self.analyzer.tokenize(value))}" for value in doc[field]]
+        terms = doc_value_terms + terms
+        if pos.positions[0] > len(terms):
+            return None
+        return terms[pos.positions[0]]
+
+    def _add_term_to_trie(self, term, count, occurrence=None, document=None):
+        if term in self._trie:
+            (frequency, occurrence) = self._trie[term]
+            self._trie[term] = (frequency + count, occurrence)
+        else:
+            if occurrence:
+                self._trie[term] = (count, occurrence)
+
+    def _add_from_segment_buffer(self, segment: Segment, oldBuffer, document=None):
+        print("Building trie and flushing segment")
+        i = 0
+        n = len(segment._buffer)
+        for k, v in segment._buffer.items():
+            count = v.collection_frequency
+            if k in oldBuffer:
+                count -= oldBuffer[k].collection_frequency
+            self._add_term_to_trie(k, count, occurrence=v.first_occurrence)
+            i += 1
+            print_progress(i, n, label="Updating trie")
+
+    # Build trie object for autocomplete. Currently rebuild from scratch when new document is added.
+    def _rebuild_trie(self):
+        print("rebuilding trie")
+        print()
+        self._trie = datrie.Trie(string.ascii_lowercase)
+        getFreq = lambda data: TermPosting.from_store_format(data).collection_frequency
+        i = 0
+        l = len(self._segments)
+        for segment in self._segments:
+            idx = segment._positions_index
+            ii = 0
+            ll = len(idx)
+            for k, v in idx.items():
+                self._add_term_to_trie(k, getFreq(v), occurrence=None)
+                ii += 1
+                old = (-1, -1)
+                if old != (i, perc):
+                    perc = self._print_progress_hook(ii, ll, i, l)
+                    old = (i, perc)
+            if i == 2: break
+
     # IMPORTANT: This assumes single threaded indexing
-    def __get_writeable_segment(self):
+    def __get_writeable_segment(self, oldBuffer=None):
         if len(self._segments) == 0:
             # starting case - create one with new id
             self._segments = [Segment(_create_segment_id(), self._storage_path, self._doc_value_fields)]
@@ -135,6 +202,8 @@ class Index:
             self._segment_update_lock.release_write()
             return self._segments[-1]
         if not most_recent.has_buffer_capacity():
+            if oldBuffer:
+                self._add_from_segment_buffer(most_recent, oldBuffer)
             # segment is open but has no capacity so flush
             most_recent.flush()
             # insert new
@@ -164,12 +233,15 @@ class Index:
                     doc_value_terms += [f"{field}:{'_'.join(self.analyzer.tokenize(value))}" for value in
                                         document.fields[field]]
             terms = doc_value_terms + terms
-            self.__get_writeable_segment().add_document(self._current_doc_id, terms, doc_values=doc_values)
+            segment = self.__get_writeable_segment()
+            oldBuffer = copy.deepcopy(segment._buffer)
+            segment.add_document(self._current_doc_id, terms, doc_values=doc_values)
             # persist to the db
             self._doc_store[str(self._current_doc_id)] = document.fields
+            self._add_from_segment_buffer(segment, oldBuffer)
             # persist vector
             if len(document.vector) > 0:
-                self._doc_store[str(self._current_doc_id)] = document.vector
+                self._vector_store[str(self._current_doc_id)] = document.vector
             doc_id = self._current_doc_id
             self._current_doc_id += 1
             self._write_lock.release_write()
@@ -179,7 +251,7 @@ class Index:
         return document.id, doc_id
 
     # this is more efficient than single document addition
-    def add_documents(self, documents):
+    def add_documents(self, documents, flushTrie=False):
         # enforce single threaded indexing
         failures = []
         doc_ids = []
@@ -195,9 +267,10 @@ class Index:
             # this could be more efficient - i.e. we could optimise bulk additions - less locking and large write chunks
             doc_batch = {}
             vector_batch = {}
-            for document in docs_to_index:
+            n = len(docs_to_index)
+            for idx, document in enumerate(docs_to_index):
                 self._id_mappings[self._current_doc_id] = document.id
-                terms = self.analyzer.process_document(document)
+                terms_and_tokens = self.analyzer.process_document(document, keepOriginal=True)
                 # this allows exact matching on doc value fields TODO: really we should have a different index for this
                 doc_value_terms = []
                 doc_values = {}
@@ -205,20 +278,29 @@ class Index:
                     if field in document.fields:
                         # TODO: we assume all doc values are a list
                         doc_values[field] = document.fields[field]
-                        doc_value_terms += [f"{field}:{'_'.join(self.analyzer.tokenize(value))}" for value in
+                        doc_value_terms += [(f"{field}:{'_'.join(self.analyzer.tokenize(value))}", None) for value in
                                             document.fields[field]]
-                terms = doc_value_terms + terms
-                self.__get_writeable_segment().add_document(self._current_doc_id, terms, doc_values=doc_values)
+                terms_and_tokens = doc_value_terms + terms_and_tokens
+                # Flush trie if flushing segment
+                segment = self.__get_writeable_segment(oldBuffer=self._old_buffer)
+                if segment != self._old_segment:
+                    self._old_segment = segment
+                    self._old_buffer = copy.deepcopy(segment._buffer)
+                segment.add_document(self._current_doc_id, terms_and_tokens, doc_values=doc_values)
                 doc_ids.append((document.id, self._current_doc_id))
-                doc_batch[str(self._current_doc_id)] = document.fields
+                self._doc_store[str(self._current_doc_id)] = document.fields
                 if len(document.vector) > 0:
                     vector_batch[str(self._current_doc_id)] = document.vector
+                print_progress(idx+1, n, label="Adding documents")
                 self._current_doc_id += 1
+            print("") # done with the progress
             # persists the batch to the db
-            self._doc_store.update(doc_batch)
+            # self._doc_store.update(doc_batch)
             # persists the vectors
             if len(vector_batch) > 0:
                 self._vector_store.update(vector_batch)
+            if flushTrie:
+                self._add_from_segment_buffer(self._old_segment, self._old_buffer)
             self._write_lock.release_write()
         except Exception as e:
             self._write_lock.release_write()
@@ -227,11 +309,34 @@ class Index:
 
     def _get_document(self, id, fields):
         doc = self._doc_store.get(str(id))
+        if not fields:
+            return doc
         return {field: doc[field] for field in fields if field in doc}
 
     def get_document_vector(self, id):
         vector = self._vector_store.get(str(id))
         return [] if vector is None else vector
+
+    def suggest(self, search):
+        try:
+            self._segment_update_lock.acquire_read()
+            rets = []
+            if search:
+                search_length = len(search.query)
+                max_results = search.max_results if search.max_results else max(3, search_length)
+                matches = self._trie.items(search.query)
+                matches.sort(key=lambda x: x[1][0], reverse=True)
+                matches = matches[:max_results]
+                print(matches)
+                for (stem, (_, term)) in matches:
+                    [common, highlight] = [term[:search_length], term[search_length:]]
+                    rets.append({
+                        'suggestion': term,
+                        'highlight': f"{common}<b>{highlight}</b>" })
+            self._segment_update_lock.release_read()
+            return rets
+        except Exception as e:
+            raise SearchException(f"Unexpected exception during querying - {e}")
 
     def search(self, query):
         # filters are currently appended as an AND phrase - this isn't ideal but these doc value fields are also indexed
