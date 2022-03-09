@@ -1,3 +1,6 @@
+import copy
+import string
+import ujson as json
 import os
 import pickle
 import sys
@@ -5,8 +8,6 @@ import time
 import uuid
 import datrie
 # import cProfile
-import copy
-import string
 from bidict import bidict
 from utils.utils import print_progress
 from search.analyzer import Analyzer
@@ -18,7 +19,7 @@ from search.posting import TermPosting
 from search.query import Query
 from search.segment import Segment, _create_segment_id
 from search.store import DocumentStore
-import ujson as json
+from search.suggestions import Suggester
 
 
 class Index:
@@ -27,6 +28,7 @@ class Index:
         # location of index files
         self._storage_path = storage_path
         self.analyzer = analyzer
+        self.suggester = Suggester(self)
         # auto generate an index id if not provided
         self._index_id = index_id
         # we currently just keep a list of segments and assume terms are in all segments - large segments (1000+docs)
@@ -35,10 +37,6 @@ class Index:
         self._segments = []
         # we maintain to generate doc ids but use use this for NOT queries
         self._current_doc_id = 1
-        # Trie structure for autocompleting
-        self._trie = datrie.Trie(string.ascii_lowercase)
-        self._old_segment = None
-        self._old_buffer = None
         # mapping of external and internal id - used to ensure we always use an incremental doc id and check external
         # ids are unique - we may want to move this to uniqueness to an external check in the future. For this reason,
         # the dict is bi-directional. internal->external, whilst inverse is external to internal.
@@ -130,64 +128,6 @@ class Index:
     def number_of_docs(self):
         return self.current_id - 1
 
-    def _get_first_unstemmed_occurrence(self, stem, document=None):
-        pos = self.get_term(stem).get_first()
-        if not pos.positions:
-            return None
-        doc = self._get_document(str(pos.doc_id), [])
-        if not doc: doc = document
-        text = ' '.join(str(x) for x in doc.values())
-        terms = [term for term in self.analyzer.tokenize(text) if term.lower() not in self.analyzer._stop_words]
-        doc_value_terms = []
-        for field in self._doc_value_fields:
-            if field in doc:
-                doc_value_terms += [f"{field}:{'_'.join(self.analyzer.tokenize(value))}" for value in doc[field]]
-        terms = doc_value_terms + terms
-        if pos.positions[0] > len(terms):
-            return None
-        return terms[pos.positions[0]]
-
-    def _add_term_to_trie(self, term, count, occurrence=None, document=None):
-        if term in self._trie:
-            (frequency, occurrence) = self._trie[term]
-            self._trie[term] = (frequency + count, occurrence)
-        else:
-            if occurrence:
-                self._trie[term] = (count, occurrence)
-
-    def _add_from_segment_buffer(self, segment: Segment, oldBuffer, document=None):
-        print("Building trie and flushing segment")
-        i = 0
-        n = len(segment._buffer)
-        for k, v in segment._buffer.items():
-            count = v.collection_frequency
-            if k in oldBuffer:
-                count -= oldBuffer[k].collection_frequency
-            self._add_term_to_trie(k, count, occurrence=v.first_occurrence)
-            i += 1
-            print_progress(i, n, label="Updating trie")
-
-    # Build trie object for autocomplete. Currently rebuild from scratch when new document is added.
-    def _rebuild_trie(self):
-        print("rebuilding trie")
-        print()
-        self._trie = datrie.Trie(string.ascii_lowercase)
-        getFreq = lambda data: TermPosting.from_store_format(data).collection_frequency
-        i = 0
-        l = len(self._segments)
-        for segment in self._segments:
-            idx = segment._positions_index
-            ii = 0
-            ll = len(idx)
-            for k, v in idx.items():
-                self._add_term_to_trie(k, getFreq(v), occurrence=None)
-                ii += 1
-                old = (-1, -1)
-                if old != (i, perc):
-                    perc = self._print_progress_hook(ii, ll, i, l)
-                    old = (i, perc)
-            if i == 2: break
-
     # IMPORTANT: This assumes single threaded indexing
     def __get_writeable_segment(self, oldBuffer=None):
         if len(self._segments) == 0:
@@ -202,8 +142,7 @@ class Index:
             self._segment_update_lock.release_write()
             return self._segments[-1]
         if not most_recent.has_buffer_capacity():
-            if oldBuffer:
-                self._add_from_segment_buffer(most_recent, oldBuffer)
+            self.suggester.add_from_segment_buffer()
             # segment is open but has no capacity so flush
             most_recent.flush()
             # insert new
@@ -234,11 +173,11 @@ class Index:
                                         document.fields[field]]
             terms = doc_value_terms + terms
             segment = self.__get_writeable_segment()
-            oldBuffer = copy.deepcopy(segment._buffer)
+            self.suggester.copy_buffer()
             segment.add_document(self._current_doc_id, terms, doc_values=doc_values)
+            self.suggester.add_from_segment_buffer()
             # persist to the db
             self._doc_store[str(self._current_doc_id)] = document.fields
-            self._add_from_segment_buffer(segment, oldBuffer)
             # persist vector
             if len(document.vector) > 0:
                 self._vector_store[str(self._current_doc_id)] = document.vector
@@ -283,24 +222,22 @@ class Index:
                 terms_and_tokens = doc_value_terms + terms_and_tokens
                 # Flush trie if flushing segment
                 segment = self.__get_writeable_segment(oldBuffer=self._old_buffer)
-                if segment != self._old_segment:
-                    self._old_segment = segment
-                    self._old_buffer = copy.deepcopy(segment._buffer)
+                self.suggester.copy_buffer()
                 segment.add_document(self._current_doc_id, terms_and_tokens, doc_values=doc_values)
                 doc_ids.append((document.id, self._current_doc_id))
-                self._doc_store[str(self._current_doc_id)] = document.fields
+                doc_batch[str(self._current_doc_id)] = document.fields
                 if len(document.vector) > 0:
                     vector_batch[str(self._current_doc_id)] = document.vector
                 print_progress(idx+1, n, label="Adding documents")
                 self._current_doc_id += 1
             print("") # done with the progress
             # persists the batch to the db
-            # self._doc_store.update(doc_batch)
+            self._doc_store.update(doc_batch)
             # persists the vectors
             if len(vector_batch) > 0:
                 self._vector_store.update(vector_batch)
             if flushTrie:
-                self._add_from_segment_buffer(self._old_segment, self._old_buffer)
+                self.suggester.add_from_segment_buffer()
             self._write_lock.release_write()
         except Exception as e:
             self._write_lock.release_write()
@@ -322,13 +259,9 @@ class Index:
             self._segment_update_lock.acquire_read()
             rets = []
             if search:
+                matches = self.suggester.suggest(search)
                 search_length = len(search.query)
-                max_results = search.max_results if search.max_results else max(3, search_length)
-                matches = self._trie.items(search.query)
-                matches.sort(key=lambda x: x[1][0], reverse=True)
-                matches = matches[:max_results]
-                print(matches)
-                for (stem, (_, term)) in matches:
+                for term in matches:
                     [common, highlight] = [term[:search_length], term[search_length:]]
                     rets.append({
                         'suggestion': term,

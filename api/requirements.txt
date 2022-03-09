@@ -5,6 +5,7 @@ chardet==4.0.0
 charset-normalizer==2.0.11
 click==8.0.3
 colorama==0.4.4
+datrie==0.8.2
 filelock==3.5.0
 Flask==2.0.2
 huggingface-hub==0.4.0
