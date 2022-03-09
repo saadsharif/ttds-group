@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import re
 from string import ascii_lowercase
 
 from datrie import Trie
@@ -12,6 +13,7 @@ from utils.utils import print_progress
 
 from models.search import SuggestionSearchSchema
 
+import cProfile
 from typing import List, Set, Dict, Tuple, Optional
 
 class Suggester:
@@ -19,19 +21,12 @@ class Suggester:
         self._trie: Dict[str, Tuple[int, str]] = trie
         self._old_segment: Segment = None
         self._old_buffer: Dict[str, TermPosting] = None
+        self._tokenizer = re.compile(r'\W+')
 
     def copy_buffer(self, segment: Segment):
         if segment != self._old_segment:
             self._old_segment = segment
             self._old_buffer = deepcopy(segment._buffer)
-
-    def suggest(self, search: SuggestionSearchSchema) -> List[str]:
-        search_length = len(search.query)
-        max_results = search.max_results if search.max_results else max(3, search_length)
-        matches: List[Tuple[str, Tuple[int, str]]] = self._trie.items(search.query)
-        matches.sort(key=lambda x: x[1][0], reverse=True)
-        ret = list(map(lambda x: x[1][1], matches))
-        return ret[:max_results]
 
     def add_from_segment_buffer(self):
         if not self._old_buffer:
@@ -50,6 +45,18 @@ class Suggester:
             print_progress(i, n, label="Updating trie")
         self._old_segment = None
         self._old_buffer = None
+
+    def suggest(self, search: SuggestionSearchSchema) -> List[str]:
+        with cProfile.Profile() as pr:
+            words = self._tokenizer.split(search.query)
+            fixed, search_word = words[:-1], words[-1]
+            search_length = len(search_word)
+            max_results = search.max_results if search.max_results else max(3, search_length)
+            matches: List[Tuple[str, Tuple[int, str]]] = self._trie.items(search_word)
+            matches.sort(key=lambda x: x[1][0], reverse=True)
+            ret = list(map(lambda x: f"{' '.join(fixed)} {x[1][1]}", matches))[:max_results]
+            pr.dump_stats("suggest.prof")
+            return ret
 
     def _add_term_to_trie(self, term, count, occurrence=""):
         if term in self._trie:
