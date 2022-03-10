@@ -28,7 +28,7 @@ class Index:
         # location of index files
         self._storage_path = storage_path
         self.analyzer = analyzer
-        self.suggester = Suggester(self)
+        self.suggester = Suggester()
         # auto generate an index id if not provided
         self._index_id = index_id
         # we currently just keep a list of segments and assume terms are in all segments - large segments (1000+docs)
@@ -84,14 +84,15 @@ class Index:
         print(f"Syncing vector store...", end="")
         self._vector_store.sync()
         print("OK")
-        self._store_index_meta()
         if len(self._segments) > 0:
             # flush the last segment if we need to
             most_recent = self._segments[-1]
             if not most_recent.is_flushed():
                 print(f"Flushing last segment...", end="")
+                self.suggester.add_from_segment_buffer()
                 most_recent.flush()
                 print("OK")
+        self._store_index_meta()
         self._write_lock.release_write()
 
     def load(self):
@@ -129,7 +130,7 @@ class Index:
         return self.current_id - 1
 
     # IMPORTANT: This assumes single threaded indexing
-    def __get_writeable_segment(self, oldBuffer=None):
+    def __get_writeable_segment(self):
         if len(self._segments) == 0:
             # starting case - create one with new id
             self._segments = [Segment(_create_segment_id(), self._storage_path, self._doc_value_fields)]
@@ -173,7 +174,7 @@ class Index:
                                         document.fields[field]]
             terms = doc_value_terms + terms
             segment = self.__get_writeable_segment()
-            self.suggester.copy_buffer()
+            self.suggester.copy_buffer(segment)
             segment.add_document(self._current_doc_id, terms, doc_values=doc_values)
             self.suggester.add_from_segment_buffer()
             # persist to the db
@@ -221,8 +222,8 @@ class Index:
                                             document.fields[field]]
                 terms_and_tokens = doc_value_terms + terms_and_tokens
                 # Flush trie if flushing segment
-                segment = self.__get_writeable_segment(oldBuffer=self._old_buffer)
-                self.suggester.copy_buffer()
+                segment = self.__get_writeable_segment()
+                self.suggester.copy_buffer(segment)
                 segment.add_document(self._current_doc_id, terms_and_tokens, doc_values=doc_values)
                 doc_ids.append((document.id, self._current_doc_id))
                 doc_batch[str(self._current_doc_id)] = document.fields

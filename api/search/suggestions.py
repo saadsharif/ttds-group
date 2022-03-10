@@ -29,7 +29,7 @@ class Suggester:
             self._old_buffer = deepcopy(segment._buffer)
 
     def add_from_segment_buffer(self):
-        if not self._old_buffer:
+        if self._old_buffer is None:
             return
         print("Building trie and flushing segment")
         i = 0
