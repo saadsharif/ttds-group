@@ -20,6 +20,12 @@ const configurationOptions = {
     resultsPerPage: 10,
   },
   alwaysSearchOnInitialLoad: true,
+  searchQuery: {
+    disjunctiveFacets: ["subject"],
+    facets: {
+     subject: { type: "value", size: 30 }
+    }
+  }
 };
 
 const Body = styled.div`

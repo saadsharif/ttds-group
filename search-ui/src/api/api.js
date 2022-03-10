@@ -3,42 +3,13 @@ import axios from 'axios';
 const searchEndpoint = 'search';
 const suggestEndpoint = 'suggest';
 
-const getYears = (hits) => {
+const processFacets = (facets) => {
   const ret = {};
-  // hits.forEach(hit => {
-  //   const [month, year] = hit.id.split(':')[1].split('.')[0].match(/.{2}/g);
-  //   const yearKey = `${month}/${year}`;
-  //   if (yearKey in ret) { ret[yearKey] += 1 } else { ret[yearKey] = 1 }
-  // });
-  return ret;
-};
-
-const getTopics = (hits) => {
-  const ret = {};
-  hits.forEach(hit => {
-    const tag = hit.fields.subject;
-    if (tag in ret) { ret[tag] += 1 } else { ret[tag] = 1 }
-  });
-  return ret;
-};
-
-const getAuthors = (hits) => {
-  const ret = {};
-  hits.forEach(hit => {
-    const authors = hit.fields.authors;
-    authors.forEach(author => { if (author in ret) { ret[author] += 1 } else { ret[author] = 1 }})
-  });
-  return ret;
-};
-
-const mockFacets = (hits) => {
-  const process = (data) => ({ type: "value", data:
-    Object.entries(data).sort((a, b) => b[1] - a[1]).map(e => ({ value: e[0], count: e[1] }))});
-  return {
-    dates: [process(getYears(hits))],
-    authors: [process(getAuthors(hits))],
-    topics: [process(getTopics(hits))],
+  for (const [field, value] of Object.entries(facets)) {
+    const data = Object.entries(value).map(([value, count]) => ({ value, count }));
+    ret[field] = [{ type: "value", data }]
   }
+  return ret;
 };
 
 export default class SearchAPI {
@@ -52,30 +23,36 @@ export default class SearchAPI {
     
   onSearch(state, queryConfig) {
     console.log(state, queryConfig);
-    const { current: currentPage, resultsPerPage } = state;
+    const { current: currentPage, resultsPerPage, filters } = state;
     const toObjectWithRaw = value => ({ raw: value })
     const addEachKeyValueToObject = (acc, [key, value]) => ({
       ...acc,
       [key]: value
     });
-      
+
     return axios.post(searchEndpoint, {
       'query': state.searchTerm,
       'max_results': resultsPerPage,
       'offset': (currentPage - 1) * resultsPerPage,
-      'fields': ['abstract', 'authors', 'subject', 'title', 'body']
+      'fields': ['abstract', 'authors', 'subject', 'title'],
+      'facets': [{ 'field': "subject", 'num_values': 10 }, { 'field': "authors", 'num_values': 10 }],
+      'filters': filters.map(({ field, values }) => (values.map(value => ({field, value})))).concat()[0]
     }).then(response =>
       response.data
-    ).then(results => ({
-      resultSearchTerm: state.searchTerm,
-      results: results.hits.map(result => (Object.entries(result).map(([fieldName, fieldValue]) => [
-        fieldName, toObjectWithRaw(fieldValue)]).reduce(addEachKeyValueToObject, {}))
-      ),
-      totalResults: results.total_hits,
-      requestId: results.request_id,
-      totalPages: Math.ceil(results.total_hits / resultsPerPage),
-      facets: mockFacets(results.hits), //Mock the facets for now
-    }))
+    ).then(results => {
+      const ret = ({
+        resultSearchTerm: state.searchTerm,
+        results: results.hits.map(result => (Object.entries(result).map(([fieldName, fieldValue]) => [
+          fieldName, toObjectWithRaw(fieldValue)]).reduce(addEachKeyValueToObject, {}))
+        ),
+        totalResults: results.total_hits,
+        requestId: results.request_id,
+        totalPages: Math.ceil(results.total_hits / resultsPerPage),
+        facets: processFacets(results.facets),
+      });
+      console.log(ret);
+      return ret;
+    });
   }
 
   async onAutocomplete({ searchTerm }, queryConfig) {

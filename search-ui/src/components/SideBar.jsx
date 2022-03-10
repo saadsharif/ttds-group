@@ -1,7 +1,8 @@
 import React from 'react';
 import styled from 'styled-components/macro';
-import { Sorting, Facet } from "@elastic/react-search-ui";
-import { MultiCheckboxFacet } from "@elastic/react-search-ui-views";
+import { Facet } from "@elastic/react-search-ui";
+
+import { FacetPlaceholder } from './Loaders';
 
 const StyledSideBar = styled.div`
   width: 30%;
@@ -34,30 +35,26 @@ const Group = ({ title, children }) => (
 const SideBar = () => {
   return (
     <StyledSideBar>
-      <Group title="Sort by">
+      {/* <Group title="Sort by">
         <Sorting
           sortOptions={[
             { name: "Relevance", value: "", direction: "" },
             { name: "Title", value: "title", direction: "asc" }
         ]}/>
-      </Group>
+      </Group> */}
       <Group title="Topics">
-        <Facet
-          field="topics"
+        {<Facet
+          field="subject"
+          label=""
           isFilterable={true}
-          filterType="any" />
-      </Group>
-      <Group title="Publication Date">
-        <Facet
-          field="dates"
-          // isFilterable={true}
-          filterType="any" />
+          filterType="all" />  || <FacetPlaceholder />}
       </Group>
       <Group title="Authors">
         <Facet
           field="authors"
+          label=""
           isFilterable={true}
-          filterType="any" />
+          filterType="all" />
       </Group>
     </StyledSideBar>
   );
