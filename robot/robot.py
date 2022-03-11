@@ -83,12 +83,15 @@ class Robot:
                 print(f"Skipped paper {id}.")
         except Exception as e:
             traceback.print_exc()
-            print(e)
+            raise e
 
     def crawl(self):
         while True:
-            self.process_next_paper()
-            time.sleep(3)
+            try:
+                self.process_next_paper()
+            except:
+                print("Probably finished indexing everything, sleep for 6h.")
+                time.sleep(60 * 60 * 6)
 
 class CleanExit(object):
     def __init__(self, f) -> None:
