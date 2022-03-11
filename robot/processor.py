@@ -14,6 +14,9 @@ RawData = Dict[str, Union[str, List[str]]]
 
 def extract_metadata(homepage: BeautifulSoup, id: str):
     record = {}
+    record['date'] = homepage.find(class_="dateline").text.replace('Submitted on ', '').strip()[1:-1]
+    print(record)
+    exit()
     record["title"] = homepage.find(class_="title").text.replace('Title:', '')
     record["authors"] = homepage.find(class_="authors").text.replace('Authors:', '')
     record["abstract"] = homepage.find(class_="abstract").text.replace('\nAbstract:', '').replace('\n', ' ')
