@@ -5,6 +5,7 @@ import os
 import pickle
 import sys
 import time
+import traceback
 import uuid
 import datrie
 # import cProfile
@@ -152,6 +153,27 @@ class Index:
             self._segment_update_lock.release_write()
         return self._segments[-1]
 
+    def process_document(self, document, flushTrie=False):
+        self._id_mappings[self._current_doc_id] = document.id
+        terms_and_tokens = self.analyzer.process_document(document, keepOriginal=True)
+        # this allows exact matching on doc value fields TODO: really we should have a different index for this
+        doc_value_terms = []
+        doc_values = {}
+        for field in self._doc_value_fields:
+            if field in document.fields:
+                # TODO: we assume all doc values are a list
+                doc_values[field] = document.fields[field]
+                doc_value_terms += [(f"{field}:{'_'.join(self.analyzer.tokenize(value))}", None) for value in
+                                    document.fields[field]]
+        terms_and_tokens = doc_value_terms + terms_and_tokens
+        # Flush trie if flushing segment
+        segment = self.__get_writeable_segment()
+        self.suggester.copy_buffer(segment)
+        segment.add_document(self._current_doc_id, terms_and_tokens, doc_values=doc_values)
+        if flushTrie:
+            self.suggester.add_from_segment_buffer()
+
+
     # this is an append only operation. We generated a new internal id for the document and store a mapping between the
     # the two. The passed id here must be unique - no updates supported, but can be anything.
     def add_document(self, document):
@@ -161,22 +183,7 @@ class Index:
             self._write_lock.release_write()
             raise IndexException(f'{document.id} already exists in index {self._index_id}')
         try:
-            self._id_mappings[self._current_doc_id] = document.id
-            # TODO: no separate indices per field currently - we might want to add this
-            terms = self.analyzer.process_document(document)
-            # doc values
-            doc_value_terms = []
-            doc_values = {}
-            for field in self._doc_value_fields:
-                if field in document.fields:
-                    doc_values[field] = document.fields[field]
-                    doc_value_terms += [f"{field}:{'_'.join(self.analyzer.tokenize(value))}" for value in
-                                        document.fields[field]]
-            terms = doc_value_terms + terms
-            segment = self.__get_writeable_segment()
-            self.suggester.copy_buffer(segment)
-            segment.add_document(self._current_doc_id, terms, doc_values=doc_values)
-            self.suggester.add_from_segment_buffer()
+            self.process_document(document, flushTrie=True)
             # persist to the db
             self._doc_store[str(self._current_doc_id)] = document.fields
             # persist vector
@@ -186,6 +193,7 @@ class Index:
             self._current_doc_id += 1
             self._write_lock.release_write()
         except Exception as e:
+            traceback.print_exc()
             self._write_lock.release_write()
             raise IndexException(f"Unexpected exception during indexing - {e}")
         return document.id, doc_id
@@ -209,22 +217,7 @@ class Index:
             vector_batch = {}
             n = len(docs_to_index)
             for idx, document in enumerate(docs_to_index):
-                self._id_mappings[self._current_doc_id] = document.id
-                terms_and_tokens = self.analyzer.process_document(document, keepOriginal=True)
-                # this allows exact matching on doc value fields TODO: really we should have a different index for this
-                doc_value_terms = []
-                doc_values = {}
-                for field in self._doc_value_fields:
-                    if field in document.fields:
-                        # TODO: we assume all doc values are a list
-                        doc_values[field] = document.fields[field]
-                        doc_value_terms += [(f"{field}:{'_'.join(self.analyzer.tokenize(value))}", None) for value in
-                                            document.fields[field]]
-                terms_and_tokens = doc_value_terms + terms_and_tokens
-                # Flush trie if flushing segment
-                segment = self.__get_writeable_segment()
-                self.suggester.copy_buffer(segment)
-                segment.add_document(self._current_doc_id, terms_and_tokens, doc_values=doc_values)
+                self.process_document(document)
                 doc_ids.append((document.id, self._current_doc_id))
                 doc_batch[str(self._current_doc_id)] = document.fields
                 if len(document.vector) > 0:
