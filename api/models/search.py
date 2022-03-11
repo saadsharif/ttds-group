@@ -37,6 +37,7 @@ class SearchSchema(Schema):
         return Search(data['query'], data['score'], data['max_results'], data['offset'], data['iFields'],
                       data['facets'], data['filters'], vector_score=data['vector_score'])
 
+
 class SuggestionSearchSchema(Schema):
     query = fields.Str(required=True)
     max_results = fields.Int(default=10, missing=10)

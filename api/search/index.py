@@ -1,14 +1,9 @@
-import copy
-import string
-import ujson as json
 import os
 import pickle
 import sys
 import time
 import traceback
 import uuid
-import datrie
-# import cProfile
 from bidict import bidict
 from utils.utils import print_progress
 from search.analyzer import Analyzer
@@ -173,7 +168,6 @@ class Index:
         if flushTrie:
             self.suggester.add_from_segment_buffer()
 
-
     # this is an append only operation. We generated a new internal id for the document and store a mapping between the
     # the two. The passed id here must be unique - no updates supported, but can be anything.
     def add_document(self, document):
@@ -222,9 +216,9 @@ class Index:
                 doc_batch[str(self._current_doc_id)] = document.fields
                 if len(document.vector) > 0:
                     vector_batch[str(self._current_doc_id)] = document.vector
-                print_progress(idx+1, n, label="Adding documents")
+                print_progress(idx + 1, n, label="Adding documents")
                 self._current_doc_id += 1
-            print("") # done with the progress
+            print("")  # done with the progress
             # persists the batch to the db
             self._doc_store.update(doc_batch)
             # persists the vectors
@@ -259,7 +253,7 @@ class Index:
                     [common, highlight] = [term[:search_length], term[search_length:]]
                     rets.append({
                         'suggestion': term,
-                        'highlight': f"{common}<b>{highlight}</b>" })
+                        'highlight': f"{common}<b>{highlight}</b>"})
             self._segment_update_lock.release_read()
             return rets
         except Exception as e:
