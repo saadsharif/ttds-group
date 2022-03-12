@@ -10,10 +10,11 @@ class ResultSchema(Schema):
 
 
 class Results:
-    def __init__(self, hits, total_hits, facets):
-        self.total_hits = total_hits
+    def __init__(self, hits, total_hits, facets, time_elapsed):
         self.hits = hits
+        self.total_hits = total_hits
         self.facets = facets
+        self.time_elapsed = time_elapsed
         self.request_id = str(uuid.uuid1())
 
 
@@ -21,6 +22,7 @@ class ResultsSchema(Schema):
     hits = fields.List(fields.Nested(ResultSchema))
     total_hits = fields.Int()
     facets = fields.Dict()
+    time_elapsed = fields.Float()
     request_id = fields.Str()
 
 class Suggestions:
