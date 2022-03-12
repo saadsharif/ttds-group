@@ -7,11 +7,12 @@ import numpy as np
 import requests
 
 parser = argparse.ArgumentParser(description="Extract author")
-parser.add_argument("-f", "--file", help="query file", required=False, default="queries.txt")
+parser.add_argument("-q", "--file", help="query file", required=False, default="queries.txt")
 parser.add_argument("-a", "--host", help="host", default="localhost")
 parser.add_argument("-p", "--port", help="port", default=5000, type=int)
 parser.add_argument("-o", "--output", help="output file", required=False, default="hits.txt")
 parser.add_argument("-s", "--slowest", help="top N slowest queries", default=10, type=int)
+parser.add_argument("-f", "--facets", help="facet queries", action='store_true')
 args = parser.parse_args()
 query_times = []
 times = []
@@ -19,29 +20,34 @@ total_hits = []
 with open(args.file, "r") as query_file, open(args.output, "w") as output_file:
     for line in query_file:
         query_parts = line.strip().split(",")
-        query = query_parts[0]
-        response = requests.post(f"http://{args.host}:{args.port}/search", json={
-            "query": f"{query}",
+        query_text = query_parts[0]
+        query = {
+            "query": f"{query_text}",
             "offset": 0,
             "max_results": 10,
             "fields": ["title"]
-        }, timeout=3600)
+        }
+        if args.facets:
+            query['facets'] = [{
+                'field': 'authors'
+            }]
+        response = requests.post(f"http://{args.host}:{args.port}/search", json=query, timeout=3600)
         if response.status_code != 200:
-            print(f"PANIC: {query} - caused {response.status_code}")
+            print(f"PANIC: {query_text} - caused {response.status_code}")
             sys.exit(1)
         hits = response.json()
         if len(query_parts) == 2 and int(query_parts[1]) != hits["total_hits"]:
-            print(f"ERROR: {query} - expected {query_parts[1]} hits but got {hits['total_hits']}")
+            print(f"ERROR: {query_text} - expected {query_parts[1]} hits but got {hits['total_hits']}")
             sys.exit(1)
         if len(query_parts) != 2 and hits["total_hits"] == 0:
             # only warn if we don't have an explicit hit count of 0
-            print(f"WARNING: Zero hits for {query}")
+            print(f"WARNING: Zero hits for {query_text}")
         total_hits.append(hits["total_hits"])
         elapsed = response.elapsed.total_seconds()
         times.append(elapsed)
-        query_times.append((query, elapsed))
-        output_file.write(f"{query},{hits['total_hits']}\n")
-        print(f"{query} - took {elapsed}s with {hits['total_hits']} hits - current mean {statistics.mean(times)}s")
+        query_times.append((query_text, elapsed))
+        output_file.write(f"{query_text},{hits['total_hits']}\n")
+        print(f"{query_text} - took {elapsed}s with {hits['total_hits']} hits - current mean {statistics.mean(times)}s")
 
 print("----------------STATISTICS----------------")
 print(f"Max: {max(times)}")

@@ -1,14 +1,9 @@
-import copy
-import string
-import ujson as json
 import os
 import pickle
 import sys
 import time
 import traceback
 import uuid
-import datrie
-# import cProfile
 from bidict import bidict
 from utils.utils import print_progress
 from search.analyzer import Analyzer
@@ -29,7 +24,7 @@ class Index:
         # location of index files
         self._storage_path = storage_path
         self.analyzer = analyzer
-        self.suggester = Suggester()
+        self._suggester = Suggester()
         # auto generate an index id if not provided
         self._index_id = index_id
         # we currently just keep a list of segments and assume terms are in all segments - large segments (1000+docs)
@@ -90,7 +85,7 @@ class Index:
             most_recent = self._segments[-1]
             if not most_recent.is_flushed():
                 print(f"Flushing last segment...", end="")
-                self.suggester.add_from_segment_buffer()
+                self._suggester.add_from_segment_buffer()
                 most_recent.flush()
                 print("OK")
         self._store_index_meta()
@@ -144,7 +139,7 @@ class Index:
             self._segment_update_lock.release_write()
             return self._segments[-1]
         if not most_recent.has_buffer_capacity():
-            self.suggester.add_from_segment_buffer()
+            self._suggester.add_from_segment_buffer()
             # segment is open but has no capacity so flush
             most_recent.flush()
             # insert new
@@ -168,11 +163,10 @@ class Index:
         terms_and_tokens = doc_value_terms + terms_and_tokens
         # Flush trie if flushing segment
         segment = self.__get_writeable_segment()
-        self.suggester.copy_buffer(segment)
+        self._suggester.copy_buffer(segment)
         segment.add_document(self._current_doc_id, terms_and_tokens, doc_values=doc_values)
         if flushTrie:
-            self.suggester.add_from_segment_buffer()
-
+            self._suggester.add_from_segment_buffer()
 
     # this is an append only operation. We generated a new internal id for the document and store a mapping between the
     # the two. The passed id here must be unique - no updates supported, but can be anything.
@@ -222,16 +216,16 @@ class Index:
                 doc_batch[str(self._current_doc_id)] = document.fields
                 if len(document.vector) > 0:
                     vector_batch[str(self._current_doc_id)] = document.vector
-                print_progress(idx+1, n, label="Adding documents")
+                print_progress(idx + 1, n, label="Adding documents")
                 self._current_doc_id += 1
-            print("") # done with the progress
+            print("")  # done with the progress
             # persists the batch to the db
             self._doc_store.update(doc_batch)
             # persists the vectors
             if len(vector_batch) > 0:
                 self._vector_store.update(vector_batch)
             if flushTrie:
-                self.suggester.add_from_segment_buffer()
+                self._suggester.add_from_segment_buffer()
             self._write_lock.release_write()
         except Exception as e:
             self._write_lock.release_write()
@@ -253,13 +247,13 @@ class Index:
             self._segment_update_lock.acquire_read()
             rets = []
             if search:
-                matches = self.suggester.suggest(search)
+                matches = self._suggester.suggest(search)
                 search_length = len(search.query)
                 for term in matches:
                     [common, highlight] = [term[:search_length], term[search_length:]]
                     rets.append({
                         'suggestion': term,
-                        'highlight': f"{common}<b>{highlight}</b>" })
+                        'highlight': f"{common}<b>{highlight}</b>"})
             self._segment_update_lock.release_read()
             return rets
         except Exception as e:

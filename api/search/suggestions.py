@@ -1,20 +1,15 @@
 from __future__ import annotations
-
 from copy import deepcopy
 import re
 from string import ascii_lowercase
-
 from datrie import Trie
-
 from search.posting import TermPosting
 from search.segment import Segment
-
 from utils.utils import print_progress
-
 from models.search import SuggestionSearchSchema
-
 import cProfile
-from typing import List, Set, Dict, Tuple, Optional
+from typing import List, Dict, Tuple
+
 
 class Suggester:
     def __init__(self, trie=Trie(ascii_lowercase)):
@@ -48,13 +43,13 @@ class Suggester:
 
     def suggest(self, search: SuggestionSearchSchema) -> List[str]:
         with cProfile.Profile() as pr:
-            words = self._tokenizer.split(search.query)
+            words = self._tokenizer.split(search.query.lower())
             fixed, search_word = words[:-1], words[-1]
             search_length = len(search_word)
             max_results = search.max_results if search.max_results else max(3, search_length)
             matches: List[Tuple[str, Tuple[int, str]]] = self._trie.items(search_word)
             matches.sort(key=lambda x: x[1][0], reverse=True)
-            ret = list(map(lambda x: f"{' '.join(fixed)} {x[1][1]}", matches))[:max_results]
+            ret = list(map(lambda x: f"{' '.join(fixed)} {x[1][1].lower()}", matches))[:max_results]
             pr.dump_stats("suggest.prof")
             return ret
 
@@ -66,19 +61,13 @@ class Suggester:
             if occurrence:
                 self._trie[term] = (count, occurrence)
 
-    def _get_first_unstemmed_occurrence(self, index, stem, document=None):
-        pos = index.get_term(stem).get_first()
-        if not pos.positions:
-            return None
-        doc = index._get_document(str(pos.doc_id), [])
-        if not doc: doc = document
-        text = ' '.join(str(x) for x in doc.values())
-        terms = [term for term in index.analyzer.tokenize(text) if term.lower() not in index.analyzer._stop_words]
-        doc_value_terms = []
-        for field in index._doc_value_fields:
-            if field in doc:
-                doc_value_terms += [f"{field}:{'_'.join(index.analyzer.tokenize(value))}" for value in doc[field]]
-        terms = doc_value_terms + terms
-        if pos.positions[0] > len(terms):
-            return None
-        return terms[pos.positions[0]]
+    def __getstate__(self):
+        """Return state values to be pickled. Just a state file."""
+        return self._trie
+
+    def __setstate__(self, state):
+        """Restore state from the unpickled state values."""
+        self._trie = state
+        self._old_segment = None
+        self._old_buffer = None
+        self._tokenizer = re.compile(r'\W+')

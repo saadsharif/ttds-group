@@ -68,8 +68,7 @@ def read(doc_filename, vector_filename, reader):
 
 
 def index_batch(url, batch, isLast=False):
-    data = ""+str(isLast)+"\n"+"\n".join(batch)
-    response = requests.post(url, data=data)
+    response = requests.post(f"{url}?flushTrie={isLast}", data="\n".join(batch))
     if response.status_code != 200:
         print(f"Unable to index - {response.status_code} - {response.text}", flush=True)
         return 0, 0

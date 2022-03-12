@@ -34,10 +34,12 @@ class Segment:
         self._min_doc_id = sys.maxsize
         self._doc_value_fields = {}
         self._doc_values = {}
+        self._doc_value_cache = {}
         for field in doc_value_fields:
             doc_value_store_path = os.path.join(storage_path, f"{self._segment_id}-{field}.dv")
             self._doc_values[field] = Store(doc_value_store_path)
             self._doc_value_fields[field] = doc_value_store_path
+            self._doc_value_cache[field] = {}
         self._flush_lock = ReadWriteLock()
         self._indexing_lock = ReadWriteLock()
 
@@ -70,13 +72,14 @@ class Segment:
         try:
             for term, token in terms_and_tokens:
                 if term not in self._buffer:
-                    term_posting = TermPosting(token)
+                    term_posting = TermPosting(first_occurrence=token)
                     self._buffer[term] = term_posting
                 self._buffer[term].add_position(doc_id, p)
                 p += 1
             for field, values in doc_values.items():
                 if field in self._doc_values:
                     self._doc_values[field][doc_id] = json.dumps(values)
+                    self._doc_value_cache[field][doc_id] = values
             if doc_id > self._max_doc_id:
                 self._max_doc_id = doc_id
             if doc_id < self._min_doc_id:
@@ -95,8 +98,14 @@ class Segment:
             return None
         if doc_id > self._max_doc_id:
             return None
+        # check the cache first
+        if doc_id in self._doc_value_cache[field]:
+            return self._doc_value_cache[field][doc_id]
         if doc_id in self._doc_values[field]:
-            return json.loads(self._doc_values[field][doc_id])
+            values = json.loads(self._doc_values[field][doc_id])
+            # insert into cache
+            self._doc_value_cache[field][doc_id] = values
+            return values
         return None
 
     # if with_positions is False we can use the postings file which is a smaller read
@@ -147,6 +156,7 @@ class Segment:
             self._postings_index.clear()
             for field in self._doc_values.keys():
                 self._doc_values[field].clear()
+                self._doc_value_cache[field].clear()
             raise e
         self._is_flushed = True
         # release the memory of the segment
@@ -181,7 +191,10 @@ class Segment:
         print(f"Index loaded for {self._segment_id}")
         # load the doc values
         self._doc_values = {}
+        # for now we don't populate the cache
+        self._doc_value_cache = {}
         for field, path in self._doc_value_fields.items():
+            self._doc_value_cache[field] = {}
             print(f"Loading field {field} in segment {self._segment_id}...")
             self._doc_values[field] = Store(path)
             print(f"Field {field} loaded for segment {self._segment_id}")
@@ -210,6 +223,8 @@ class Segment:
 
     # this closes the segment on shutdown
     def close(self):
+        self._buffer.clear()
+        self._doc_value_cache.clear()
         self._positions_index.close()
         for doc_values in self._doc_values.values():
             doc_values.close()
