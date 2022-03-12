@@ -223,3 +223,13 @@ python utils/optimize.py --target_segments 1
 ```
 
 By default (no params), this script optimizes to a single segment. This can be called once all indexing is finished.
+
+## Running in Production
+
+`API_ENV=prod python api.py`
+
+Port and bind address can be set with `API_PORT` and `API_HOST` respectively.
+
+We use cherry as our production wsgi container.
+
+Note that it is single threaded but we don't expect this to be an issue.

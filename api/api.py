@@ -15,11 +15,14 @@ from search.analyzer import Analyzer
 from search.exception import IndexException, StoreException, MergeException, SearchException
 from search.index import Index
 from search.utils import load_stop_words
+from cheroot.wsgi import Server as WSGIServer
+from cheroot.wsgi import PathInfoDispatcher as WSGIPathInfoDispatcher
 
 index: Index = None
 
 
-def load_index():
+def create_app():
+    app = Flask(__name__, static_folder="templates/static")
     global index
     # maybe this could be a parameter later
     stop_words = load_stop_words('stop_words.txt')
@@ -30,18 +33,10 @@ def load_index():
     index = Index(index_dir, Analyzer(stop_words, True), doc_value_fields=['authors', 'subject'])
     index.load()
     print('Index ready')
+    return app
 
 
-class IndexServer(Flask):
-    def run(self, host=None, port=None, debug=None, load_dotenv=True, **options):
-        if not self.debug or os.getenv('WERKZEUG_RUN_MAIN') == 'true':
-            with self.app_context():
-                # initiate the inverted index
-                load_index()
-        super(IndexServer, self).run(host=host, port=port, debug=debug, load_dotenv=load_dotenv, **options)
-
-
-app = IndexServer(__name__)
+app = create_app()
 
 
 def jsonify(data):
@@ -189,4 +184,15 @@ def on_exit_api():
 atexit.register(on_exit_api)
 
 if __name__ == '__main__':
-    app.run()
+    mode = os.getenv("API_ENV", "DEV").upper()
+    if mode in ["DEV", "DEVELOPMENT"]:
+        print("Running in development mode!")
+        app.run()
+    elif mode in ["PROD", "PRODUCTION"]:
+        print("Running in production mode!")
+        my_app = WSGIPathInfoDispatcher({'/': app})
+        server = WSGIServer((os.getenv("API_HOST", "127.0.0.1"), int(os.getenv("API_PORT", 5000))), my_app)
+        try:
+            server.start()
+        except KeyboardInterrupt:
+            server.stop()
