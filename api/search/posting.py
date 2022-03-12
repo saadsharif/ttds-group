@@ -125,7 +125,7 @@ class Posting:
 # encapsulates all the information about a term
 class TermPosting:
 
-    def __init__(self, first_occurrence=None, collecting_frequency=0, stop_word=False):
+    def __init__(self, collecting_frequency=0, stop_word=False, first_occurrence=None):
         self._collection_frequency = collecting_frequency
         self._first_occurrence = first_occurrence
         self.postings = []
@@ -186,7 +186,7 @@ class TermPosting:
     @staticmethod
     def from_store_format(value, with_positions=True, with_skips=True):
         components = value.split("|")
-        termPosting = TermPosting(int(components[0]))
+        termPosting = TermPosting(collecting_frequency=int(components[0]))
         if with_skips:
             skips = components[1].split(":")
             termPosting.skips = [parse_skip(skip) for skip in skips if skip != ""]

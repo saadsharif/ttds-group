@@ -1,9 +1,7 @@
 import atexit
 import ujson as json
 import os
-# import cProfile
 from json import JSONDecodeError
-from flask.json import JSONEncoder
 from flask import Flask, request
 from marshmallow import ValidationError
 
@@ -52,6 +50,7 @@ def jsonify(data):
         mimetype=app.config["JSONIFY_MIMETYPE"],
     )
 
+
 @app.route('/suggest', methods=['POST'])
 def suggest():
     try:
@@ -61,6 +60,7 @@ def suggest():
         # TODO: Pass the request to API and marshall the responses
     except ValidationError as e:
         return jsonify(APIErrorSchema().dump(APIError('unable to parse search request', e.messages))), 400
+
 
 @app.route('/search', methods=['POST'])
 def search():
@@ -75,7 +75,8 @@ def search():
         return jsonify(APIErrorSchema().dump(APIError('unable to execute search', {"exception": se.message}))), 400
     except Exception as ue:
         return jsonify(
-            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
+            APIErrorSchema().dump(
+                APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
 
 
 @app.route('/index', methods=['POST'])
@@ -96,7 +97,12 @@ def index_doc():
         return jsonify(APIErrorSchema().dump(APIError('unable to persist documents', {'index': se.message}))), 400
     except Exception as ue:
         return jsonify(
-            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
+            APIErrorSchema().dump(
+                APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
+
+
+def param_to_bool(value):
+    return value.lower() in ['true', 't']
 
 
 @app.route('/bulk_index', methods=['POST'])
@@ -106,8 +112,8 @@ def bulk_index():
         failures = []
         documents = []
         i = 1
-        # skip first line as used for flush command
-        for line in body.splitlines()[1:]:
+        flushTrie = request.args.get('flushTrie', False, type=param_to_bool)
+        for line in body.splitlines():
             try:
                 doc = DocumentSchema().load(json.loads(line))
                 i += 1
@@ -118,7 +124,7 @@ def bulk_index():
                 failures.append(f"Cannot parse document at line {i}")
             except ValueError as e:
                 failures.append(f"Cannot parse document at line {i}")
-        doc_ids, fails = index.add_documents(documents, flushTrie=body[0] == "T")
+        doc_ids, fails = index.add_documents(documents, flushTrie=flushTrie)
         failures += fails
         return jsonify({
             'docs': [{
@@ -133,7 +139,8 @@ def bulk_index():
         return jsonify(APIErrorSchema().dump(APIError('unable to persist documents', {'index': se.message}))), 400
     except Exception as ue:
         return jsonify(
-            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
+            APIErrorSchema().dump(
+                APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
 
 
 # this saves the current index segment in memory to disk - it causes internal indexing and querying to be locked.
@@ -147,7 +154,8 @@ def flush():
         return jsonify(APIErrorSchema().dump(APIError('unable to persist documents', {'index': se.message}))), 400
     except Exception as ue:
         return jsonify(
-            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception',{"exception": str(ue)}))), 400
+            APIErrorSchema().dump(
+                APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
 
 
 # selects two segments (smallest and flushed) and merges them together
@@ -163,7 +171,8 @@ def optimize():
         return jsonify(APIErrorSchema().dump(APIError('unable to merge segments', {'index': se.message}))), 400
     except Exception as ue:
         return jsonify(
-            APIErrorSchema().dump(APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
+            APIErrorSchema().dump(
+                APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
 
 
 def on_exit_api():
