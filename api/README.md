@@ -6,9 +6,8 @@
 
 ## Setup
 
-1. `sudo apt-get install libffi-dev`
+1. `sudo apt-get install python3-dev libunwind8-dev libffi-dev`
 2. `pip install -r requirements.txt`
-
 
 ## Running 
 
