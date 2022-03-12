@@ -2,7 +2,7 @@ import atexit
 import ujson as json
 import os
 from json import JSONDecodeError
-from flask import Flask, request
+from flask import Flask, request, render_template
 from marshmallow import ValidationError
 
 from models.document import DocumentSchema
@@ -49,6 +49,11 @@ def jsonify(data):
         f"{json.dumps(data, indent=2)}\n",
         mimetype=app.config["JSONIFY_MIMETYPE"],
     )
+
+
+@app.route("/")
+def site():
+    return render_template("index.html")
 
 
 @app.route('/suggest', methods=['POST'])
