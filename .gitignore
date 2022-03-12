@@ -4,3 +4,6 @@ all_2021_facets.json
 **/*.ndjson
 api/indexMedium
 **/*.prof
+**/*.pickle
+**/__pycache__
+tika-server*.jar
