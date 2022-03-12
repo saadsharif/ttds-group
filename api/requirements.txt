@@ -3,6 +3,7 @@ bidict==0.21.4
 certifi==2021.10.8
 chardet==4.0.0
 charset-normalizer==2.0.11
+cheroot==8.6.0
 click==8.0.3
 colorama==0.4.4
 datrie==0.8.2
@@ -11,6 +12,7 @@ Flask==2.0.2
 huggingface-hub==0.4.0
 idna==3.3
 itsdangerous==2.0.1
+jaraco.functools==3.5.0
 Jinja2==3.0.3
 joblib==1.1.0
 jsonlines==3.0.0
@@ -19,6 +21,7 @@ lmdbm==0.0.5
 lz4==4.0.0
 MarkupSafe==2.0.1
 marshmallow==3.14.1
+more-itertools==8.12.0
 ndjson==0.3.1
 nltk==3.7
 numpy==1.22.2
