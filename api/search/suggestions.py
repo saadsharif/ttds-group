@@ -42,16 +42,14 @@ class Suggester:
         self._old_buffer = None
 
     def suggest(self, search: SuggestionSearchSchema) -> List[str]:
-        with cProfile.Profile() as pr:
-            words = self._tokenizer.split(search.query.lower())
-            fixed, search_word = words[:-1], words[-1]
-            search_length = len(search_word)
-            max_results = search.max_results if search.max_results else max(3, search_length)
-            matches: List[Tuple[str, Tuple[int, str]]] = self._trie.items(search_word)
-            matches.sort(key=lambda x: x[1][0], reverse=True)
-            ret = list(map(lambda x: f"{' '.join(fixed)} {x[1][1].lower()}", matches))[:max_results]
-            pr.dump_stats("suggest.prof")
-            return ret
+        words = self._tokenizer.split(search.query.lower())
+        fixed, search_word = words[:-1], words[-1]
+        search_length = len(search_word)
+        max_results = search.max_results if search.max_results else max(3, search_length)
+        matches: List[Tuple[str, Tuple[int, str]]] = self._trie.items(search_word)
+        matches.sort(key=lambda x: x[1][0], reverse=True)
+        ret = list(map(lambda x: f"{' '.join(fixed)} {x[1][1].lower()}", matches))[:max_results]
+        return ret
 
     def _add_term_to_trie(self, term, count, occurrence=""):
         if term in self._trie:
