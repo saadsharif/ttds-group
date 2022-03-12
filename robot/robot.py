@@ -100,7 +100,7 @@ class CleanExit(object):
     def __enter__(self):
         pass
     
-    def __exit__(self):
+    def __exit__(self, *_):
         self.f()
         return True
 

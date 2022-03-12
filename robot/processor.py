@@ -14,14 +14,12 @@ RawData = Dict[str, Union[str, List[str]]]
 
 def extract_metadata(homepage: BeautifulSoup, id: str):
     record = {}
+    record["id"] = f"arXiv:{id}"
     record['date'] = homepage.find(class_="dateline").text.replace('Submitted on ', '').strip()[1:-1]
-    print(record)
-    exit()
     record["title"] = homepage.find(class_="title").text.replace('Title:', '')
     record["authors"] = homepage.find(class_="authors").text.replace('Authors:', '')
     record["abstract"] = homepage.find(class_="abstract").text.replace('\nAbstract:', '').replace('\n', ' ')
-    record["subject"] = homepage.find(class_="primary-subject").text
-    record["id"] = f"arXiv:{id}"
+    record["subject"] = homepage.find(class_="subjects").text
     return record
 
 def pdf2text(pdf: Response):
@@ -39,8 +37,10 @@ def extract_authors(data: RawData):
     data['authors'] = authors
     return data
 
-def extract_subjects(data: RawData):
-    subjects = [data["subject"].split("(")[1][:-1]]
+def extract_subjects(data: RawData, rx=re.compile(r"\((\S*)\)")):
+    matches = rx.finditer(data["subject"])
+    print(data["subject"])
+    subjects = [m.group(1) for m in matches]
     mapped_subjects = []
     for subject in subjects:
         if not subject in CATEGORIES:
