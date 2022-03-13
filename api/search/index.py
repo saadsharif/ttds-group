@@ -210,14 +210,14 @@ class Index:
             # this could be more efficient - i.e. we could optimise bulk additions - less locking and large write chunks
             doc_batch = {}
             vector_batch = {}
-            # n = len(docs_to_index)
+            n = len(docs_to_index)
             for idx, document in enumerate(docs_to_index):
                 self.process_document(document)
                 doc_ids.append((document.id, self._current_doc_id))
                 doc_batch[str(self._current_doc_id)] = document.fields
                 if len(document.vector) > 0:
                     vector_batch[str(self._current_doc_id)] = document.vector
-                # print_progress(idx + 1, n, label="Adding documents")
+                print_progress(idx + 1, n, label="Adding documents")
                 self._current_doc_id += 1
             print("")  # done with the progress
             # persists the batch to the db

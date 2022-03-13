@@ -21,10 +21,8 @@ class Suggester:
         i = 0
         n = segment.num_terms
         for k, v in segment.terms():
-            count = v.collection_frequency
             if self._valid_term(k):
-                pass
-                self._add_term_to_trie(k, count, occurrence=v.first_occurrence)
+                self._add_term_to_trie(k, v.collection_frequency, occurrence=v.first_occurrence)
             i += 1
             print_progress(i, n, label=f"Updating trie with segment {segment.segment_id}")
 
@@ -32,9 +30,7 @@ class Suggester:
     def _valid_term(term):
         if ":" in term:
             return False
-        if term[0].isdigit():
-            return False
-        return True
+        return term.isalpha()
 
     def suggest(self, search: SuggestionSearchSchema) -> List[str]:
         words = self._tokenizer.split(search.query.lower())
@@ -53,4 +49,3 @@ class Suggester:
         else:
             if occurrence:
                 self._trie[term] = (count, occurrence)
-
