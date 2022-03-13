@@ -208,23 +208,24 @@ class Index:
                 else:
                     docs_to_index.append(document)
             # this could be more efficient - i.e. we could optimise bulk additions - less locking and large write chunks
-            doc_batch = {}
-            vector_batch = {}
-            n = len(docs_to_index)
-            print(f"Indexing {n} documents...", end="")
-            for idx, document in enumerate(docs_to_index):
-                self.process_document(document)
-                doc_ids.append((document.id, self._current_doc_id))
-                doc_batch[str(self._current_doc_id)] = document.fields
-                if len(document.vector) > 0:
-                    vector_batch[str(self._current_doc_id)] = document.vector
-                self._current_doc_id += 1
-            print("OK")  # done with the progress
-            # persists the batch to the db
-            self._doc_store.update(doc_batch)
-            # persists the vectors
-            if len(vector_batch) > 0:
-                self._vector_store.update(vector_batch)
+            if len(docs_to_index) > 0:
+                doc_batch = {}
+                vector_batch = {}
+                n = len(docs_to_index)
+                print(f"Indexing {n} documents...", end="")
+                for idx, document in enumerate(docs_to_index):
+                    self.process_document(document)
+                    doc_ids.append((document.id, self._current_doc_id))
+                    doc_batch[str(self._current_doc_id)] = document.fields
+                    if len(document.vector) > 0:
+                        vector_batch[str(self._current_doc_id)] = document.vector
+                    self._current_doc_id += 1
+                print("OK")  # done with the progress
+                # persists the batch to the db
+                self._doc_store.update(doc_batch)
+                # persists the vectors
+                if len(vector_batch) > 0:
+                    self._vector_store.update(vector_batch)
             self._write_lock.release_write()
         except Exception as e:
             self._write_lock.release_write()

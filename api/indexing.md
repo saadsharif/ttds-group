@@ -94,7 +94,7 @@ Several earlier design choices optimize merge speed. Specifically:
 2. Postings and stored in document id order. This allows postings for a term to be simply concatenated.
 3. Document ids are held in order of doc id in doc value files. This allows doc value fields to be concatenated. The merged result will be a doc value file in irder of document id.
 
-This process represents a simple Logarithmic merging<sup>[8]</sup> technique.
+This process represents a simple Logarithmic merging<sup>[8]</sup> technique. Only one merge can occur at any one time.
 
 ### Boolean Search Functions & Query Evaluation
 
@@ -171,6 +171,10 @@ When a filter is specified for a query, this is appended to the query text with 
 ### Suggestions
 
 
+**TODO**
+
+
+
 
 ### Other Search functions
 
@@ -211,25 +215,26 @@ curl --location --request POST 'http://127.0.0.1:5000/search' \
 
 Other API endpoints include:
 
-- `flush`
-- `optimize`
-- `index`
-- `bulk_index`
-- `suggest` 
-- `build_suggest`
+- `/flush` - flushes the current in memory segment to disk.
+- `/optimize` - initiates a merge between the two smallest adjacent segments. Blocks if a merging is occuring. Reports the previous and new segment count. Can be repeadily called until the number of segments is 1 for an optimal index. Should be executed when indexing is complete.
+- `/index` - Indexes a single document via a `POST`. The document should be sent in the request body in JSON format. A special field `vector` can be added to send the vector for HNSW.
+- `/bulk_index` - Indexes a batch of documents via a `POST`. Documents should be sent in ndjson format in the body. A special field `vector` can be added to send the vector for HNSW.
+- `/suggest` - Provides suggestions based on query text.
+- `/build_suggest` - Builds the suggestion trie using the current segments - see [Suggestions](#suggestions).
 
-Further details can be found [here](https://github.com/saadsharif/ttds-group/blob/main/api/README.md) on deployment.
+Further details can be found [here](https://github.com/saadsharif/ttds-group/blob/main/api/README.md) on deployment and request specifications.
 
 ## Performance Optimizations
 
-ujson
-encoded on disk
-skip lists
-doc value cacheso 
-postings/positions file
-linear over segments on search 
-delta encoding didnt help
+In optimize query performance the following optimizations proved critical:
 
+- Use of the [ujson](https://pypi.org/project/ujson/) library for decoding and encoding documents. Other libraries such as SimdJSON but these provided minimal gain.
+- Use of skip lists to improve intersections and proximity matches.
+- Doc value caches for faceting
+- Seperation of postings and positions into seperate files. This specifically helps non proximity queries by reducing the volume of data for read and decoding.
+- Moving to a minimal representation on disk. JSON representations proved a bottleneck on decoding at query time. **This requires further improvement**.
+- Ensuring terms were stored in lexographical order and ensuring segment order was maintained. This ensures queries across segments do not need to resort documents for intersections and unions, since they are inherently in order.
+- Positions and postings were originally delta encoded. This provided no performance benefit. Although data size reduced on disk, this did not offset the cost of reversing the encoding at query time.
 
 ### Possible Improvements
 
