@@ -211,15 +211,15 @@ class Index:
             doc_batch = {}
             vector_batch = {}
             n = len(docs_to_index)
+            print(f"Indexing {n} documents...", end="")
             for idx, document in enumerate(docs_to_index):
                 self.process_document(document)
                 doc_ids.append((document.id, self._current_doc_id))
                 doc_batch[str(self._current_doc_id)] = document.fields
                 if len(document.vector) > 0:
                     vector_batch[str(self._current_doc_id)] = document.vector
-                print_progress(idx + 1, n, label="Adding documents")
                 self._current_doc_id += 1
-            print("")  # done with the progress
+            print("OK")  # done with the progress
             # persists the batch to the db
             self._doc_store.update(doc_batch)
             # persists the vectors
