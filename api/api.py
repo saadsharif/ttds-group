@@ -12,7 +12,7 @@ from models.search import SearchSchema, SuggestionSearchSchema
 
 # single global of our index
 from search.analyzer import Analyzer
-from search.exception import IndexException, StoreException, MergeException, SearchException
+from search.exception import IndexException, StoreException, MergeException, SearchException, TrieException
 from search.index import Index
 from search.utils import load_stop_words
 from cheroot.wsgi import Server as WSGIServer
@@ -60,6 +60,10 @@ def suggest():
         # TODO: Pass the request to API and marshall the responses
     except ValidationError as e:
         return jsonify(APIErrorSchema().dump(APIError('unable to parse search request', e.messages))), 400
+    except Exception as ue:
+        return jsonify(
+            APIErrorSchema().dump(
+                APIError('unable to execute suggest - unexpected exception', {"exception": str(ue)}))), 400
 
 
 @app.route('/search', methods=['POST'])
@@ -98,7 +102,7 @@ def index_doc():
     except Exception as ue:
         return jsonify(
             APIErrorSchema().dump(
-                APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
+                APIError('unable to execute index - unexpected exception', {"exception": str(ue)}))), 400
 
 
 def param_to_bool(value):
@@ -112,7 +116,6 @@ def bulk_index():
         failures = []
         documents = []
         i = 1
-        flushTrie = request.args.get('flushTrie', False, type=param_to_bool)
         for line in body.splitlines():
             try:
                 doc = DocumentSchema().load(json.loads(line))
@@ -124,7 +127,7 @@ def bulk_index():
                 failures.append(f"Cannot parse document at line {i}")
             except ValueError as e:
                 failures.append(f"Cannot parse document at line {i}")
-        doc_ids, fails = index.add_documents(documents, flushTrie=flushTrie)
+        doc_ids, fails = index.add_documents(documents)
         failures += fails
         return jsonify({
             'docs': [{
@@ -140,7 +143,7 @@ def bulk_index():
     except Exception as ue:
         return jsonify(
             APIErrorSchema().dump(
-                APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
+                APIError('unable to execute bulk_index - unexpected exception', {"exception": str(ue)}))), 400
 
 
 # this saves the current index segment in memory to disk - it causes internal indexing and querying to be locked.
@@ -155,7 +158,7 @@ def flush():
     except Exception as ue:
         return jsonify(
             APIErrorSchema().dump(
-                APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
+                APIError('unable to execute flush - unexpected exception', {"exception": str(ue)}))), 400
 
 
 # selects two segments (smallest and flushed) and merges them together
@@ -172,7 +175,20 @@ def optimize():
     except Exception as ue:
         return jsonify(
             APIErrorSchema().dump(
-                APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
+                APIError('unable to execute optimize - unexpected exception', {"exception": str(ue)}))), 400
+
+
+@app.route('/build_suggest', methods=['POST', 'GET'])
+def build_trie():
+    try:
+        success = index.update_suggester()
+        return jsonify({'ok': success}), 200
+    except TrieException as te:
+        return jsonify(APIErrorSchema().dump(APIError('unable to update suggestions', {'exception': te.message}))), 400
+    except Exception as ue:
+        return jsonify(
+            APIErrorSchema().dump(
+                APIError('unable to execute build_suggest - unexpected exception', {"exception": str(ue)}))), 400
 
 
 def on_exit_api():

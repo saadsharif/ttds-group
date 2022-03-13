@@ -125,6 +125,7 @@ class Posting:
 # encapsulates all the information about a term
 class TermPosting:
 
+    # first_occurrence describes the original unstemmed form
     def __init__(self, collecting_frequency=0, stop_word=False, first_occurrence=None):
         self._collection_frequency = collecting_frequency
         self._first_occurrence = first_occurrence
@@ -181,15 +182,16 @@ class TermPosting:
     def to_store_format(self, with_positions=True):
         store_rep = "|".join([posting.to_store_format(with_positions) for posting in self.postings])
         skip_rep = ":".join(_generate_skips([posting.doc_id for posting in self.postings]))
-        return f"{self.collection_frequency}|{skip_rep}|{store_rep}"
+        return f"{self._first_occurrence if self._first_occurrence else ''}|{self.collection_frequency}|{skip_rep}|{store_rep}"
 
     @staticmethod
     def from_store_format(value, with_positions=True, with_skips=True):
         components = value.split("|")
-        termPosting = TermPosting(collecting_frequency=int(components[0]))
+        first_occurrence =  None if components[0] == '' else components[0]
+        termPosting = TermPosting(collecting_frequency=int(components[1]), first_occurrence=first_occurrence)
         if with_skips:
-            skips = components[1].split(":")
+            skips = components[2].split(":")
             termPosting.skips = [parse_skip(skip) for skip in skips if skip != ""]
         termPosting.postings = [Posting.from_store_format(posting, with_positions=with_positions) for posting in
-                                components[2:]]
+                                components[3:]]
         return termPosting

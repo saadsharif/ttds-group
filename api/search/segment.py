@@ -50,6 +50,13 @@ class Segment:
         return self.number_of_documents < self._max_docs
 
     @property
+    def num_terms(self):
+        self._flush_lock.acquire_read()
+        num_terms = len(self._postings_index) if self._is_flushed else len(self._buffer)
+        self._flush_lock.release_read()
+        return num_terms
+
+    @property
     def segment_id(self):
         return self._segment_id
 
@@ -211,7 +218,8 @@ class Segment:
     def postings_items(self):
         if not self.is_flushed():
             # this would require unacceptable locking and likely not easily thread safe
-            raise NotImplemented("Can't iterate postings on non flushed segment")
+            print("Warning: Can't iterate postings on non flushed segment")
+            return
         # don't need a read lock on immutable store - it cant be changed
         for term, posting in self._postings_index.items():
             yield term, TermPosting.from_store_format(posting, with_positions=False)

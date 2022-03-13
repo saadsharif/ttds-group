@@ -1,5 +1,4 @@
 from __future__ import annotations
-from copy import deepcopy
 import re
 from string import ascii_lowercase
 from datrie import Trie
@@ -7,39 +6,25 @@ from search.posting import TermPosting
 from search.segment import Segment
 from utils.utils import print_progress
 from models.search import SuggestionSearchSchema
-import cProfile
 from typing import List, Dict, Tuple
 
 
 class Suggester:
     def __init__(self, trie=Trie(ascii_lowercase)):
         self._trie: Dict[str, Tuple[int, str]] = trie
-        self._old_segment: Segment = None
-        self._old_buffer: Dict[str, TermPosting] = None
         self._tokenizer = re.compile(r'\W+')
 
-    def copy_buffer(self, segment: Segment):
-        if segment != self._old_segment:
-            self._old_segment = segment
-            self._old_buffer = deepcopy(segment._buffer)
-
-    def add_from_segment_buffer(self):
-        if self._old_buffer is None:
-            return
-        print("Building trie and flushing segment")
-        i = 0
-        n = len(self._old_segment._buffer)
+    def add_segment(self, segment: Segment):
+        print(f"Building trie from segment {segment.segment_id}")
         k: str
         v: TermPosting
-        for k, v in self._old_segment._buffer.items():
+        i = 0
+        n = segment.num_terms
+        for k, v in segment.postings_items():
             count = v.collection_frequency
-            if k in self._old_buffer:
-                count -= self._old_buffer[k].collection_frequency
             self._add_term_to_trie(k, count, occurrence=v.first_occurrence)
             i += 1
-            print_progress(i, n, label="Updating trie")
-        self._old_segment = None
-        self._old_buffer = None
+            print_progress(i, n, label=f"Updating trie with segment {segment.segment_id}")
 
     def suggest(self, search: SuggestionSearchSchema) -> List[str]:
         words = self._tokenizer.split(search.query.lower())
@@ -59,13 +44,3 @@ class Suggester:
             if occurrence:
                 self._trie[term] = (count, occurrence)
 
-    def __getstate__(self):
-        """Return state values to be pickled. Just a state file."""
-        return self._trie
-
-    def __setstate__(self, state):
-        """Restore state from the unpickled state values."""
-        self._trie = state
-        self._old_segment = None
-        self._old_buffer = None
-        self._tokenizer = re.compile(r'\W+')

@@ -1,5 +1,6 @@
 import sys
 
+
 def print_progress(i, n, label=None):
     l = f"{label}: " if label else ""
     perc = int((100 / n) * i * 10) / 10.0
