@@ -8,7 +8,7 @@ from bidict import bidict
 from utils.utils import print_progress
 from search.analyzer import Analyzer
 from search.bert import BERTModule
-from search.exception import IndexException, SearchException, MergeException, TrieException
+from search.exception import IndexException, SearchException, MergeException, TrieException, StoreException
 from search.lock import ReadWriteLock
 from search.models import Result
 from search.posting import TermPosting
@@ -74,23 +74,27 @@ class Index:
 
     # saves the index to disk - for now just pickle down given the sizes
     def save(self):
-        # we need to lock as we shouldn't index during flushing or vise versa
-        self._write_lock.acquire_write()
-        print(f"Syncing document store...", end="")
-        self._doc_store.sync()
-        print("OK")
-        print(f"Syncing vector store...", end="")
-        self._vector_store.sync()
-        print("OK")
-        if len(self._segments) > 0:
-            # flush the last segment if we need to
-            most_recent = self._segments[-1]
-            if not most_recent.is_flushed():
-                print(f"Flushing last segment...", end="")
-                most_recent.flush()
-                print("OK")
-        self._store_index_meta()
-        self._write_lock.release_write()
+        try:
+            # we need to lock as we shouldn't index during flushing or vise versa
+            self._write_lock.acquire_write()
+            print(f"Syncing document store...", end="")
+            self._doc_store.sync()
+            print("OK")
+            print(f"Syncing vector store...", end="")
+            self._vector_store.sync()
+            print("OK")
+            if len(self._segments) > 0:
+                # flush the last segment if we need to
+                most_recent = self._segments[-1]
+                if not most_recent.is_flushed():
+                    print(f"Flushing last segment...", end="")
+                    most_recent.flush()
+                    print("OK")
+            self._store_index_meta()
+            self._write_lock.release_write()
+        except Exception as e:
+            self._write_lock.release_write()
+            raise StoreException(f"Unexpected exception during flushing - {e}")
 
     def load(self):
         self._write_lock.acquire_write()
@@ -206,14 +210,14 @@ class Index:
             # this could be more efficient - i.e. we could optimise bulk additions - less locking and large write chunks
             doc_batch = {}
             vector_batch = {}
-            n = len(docs_to_index)
+            # n = len(docs_to_index)
             for idx, document in enumerate(docs_to_index):
                 self.process_document(document)
                 doc_ids.append((document.id, self._current_doc_id))
                 doc_batch[str(self._current_doc_id)] = document.fields
                 if len(document.vector) > 0:
                     vector_batch[str(self._current_doc_id)] = document.vector
-                print_progress(idx + 1, n, label="Adding documents")
+                # print_progress(idx + 1, n, label="Adding documents")
                 self._current_doc_id += 1
             print("")  # done with the progress
             # persists the batch to the db
@@ -238,9 +242,12 @@ class Index:
         return [] if vector is None else vector
 
     def update_suggester(self):
+        # so we consider the latest segment in suggestions as we don't read the buffer
+        self.save()
         try:
             self._segment_update_lock.acquire_read()
             for segment in self._segments:
+                segment.flush()
                 self._suggester.add_segment(segment)
         except Exception as e:
             self._segment_update_lock.release_read()

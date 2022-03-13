@@ -142,35 +142,36 @@ class Segment:
     # flushed the buffer to disk - this can be called manually and "closes" the segment to additions making it immutable
     def flush(self):
         # whilst we're flushing, reads can continue on the buffer. Indexing can't.
-        try:
-            start_time = time.time()
-            self._indexing_lock.acquire_write()
-            print(f"Flushing segment {self._segment_id}")
-            # flush the term buffer in sorted term order
-            for term in sorted(self._buffer):
-                self._positions_index[term] = self._buffer[term].to_store_format()
-                self._postings_index[term] = self._buffer[term].to_store_format(with_positions=False)
-            # this flush is just to prevent queries from reading an empty buffer - might not be needed. Note we do this
-            # only for the period of clearing the buffer - not during flushing - very short period
-            self._flush_lock.acquire_write()
-        except Exception as e:
-            # make sure we release
-            print(f"Failed to flush segment - {self._segment_id} - {e}")
+        if not self._is_flushed:
+            try:
+                start_time = time.time()
+                self._indexing_lock.acquire_write()
+                print(f"Flushing segment {self._segment_id}")
+                # flush the term buffer in sorted term order
+                for term in sorted(self._buffer):
+                    self._positions_index[term] = self._buffer[term].to_store_format()
+                    self._postings_index[term] = self._buffer[term].to_store_format(with_positions=False)
+                # this flush is just to prevent queries from reading an empty buffer - might not be needed. Note we do this
+                # only for the period of clearing the buffer - not during flushing - very short period
+                self._flush_lock.acquire_write()
+            except Exception as e:
+                # make sure we release
+                print(f"Failed to flush segment - {self._segment_id} - {e}")
+                self._flush_lock.release_write()
+                self._indexing_lock.release_write()
+                # if this happens bad things have happened, reset our files
+                self._positions_index.clear()
+                self._postings_index.clear()
+                for field in self._doc_values.keys():
+                    self._doc_values[field].clear()
+                    self._doc_value_cache[field].clear()
+                raise e
+            self._is_flushed = True
+            # release the memory of the segment
+            self._buffer.clear()
             self._flush_lock.release_write()
+            print(f"Segment {self._segment_id} flushed in {time.time() - start_time}s")
             self._indexing_lock.release_write()
-            # if this happens bad things have happened, reset our files
-            self._positions_index.clear()
-            self._postings_index.clear()
-            for field in self._doc_values.keys():
-                self._doc_values[field].clear()
-                self._doc_value_cache[field].clear()
-            raise e
-        self._is_flushed = True
-        # release the memory of the segment
-        self._buffer.clear()
-        self._flush_lock.release_write()
-        print(f"Segment {self._segment_id} flushed in {time.time() - start_time}s")
-        self._indexing_lock.release_write()
 
     def __getstate__(self):
         """Return state values to be pickled. Just a state file."""
@@ -214,6 +215,13 @@ class Segment:
         # don't need a read lock on immutable store - it cant be changed
         for term, posting in self._positions_index.items():
             yield term, TermPosting.from_store_format(posting)
+
+    def terms(self):
+        if not self.is_flushed():
+            # this would require unacceptable locking and likely not easily thread safe
+            raise NotImplemented("Can't iterate positions on non flushed segment")
+        for term, posting in self._positions_index.items():
+            yield term, TermPosting.from_min_store_format(posting)
 
     def postings_items(self):
         if not self.is_flushed():

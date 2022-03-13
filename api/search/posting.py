@@ -59,7 +59,7 @@ MIN_LENGTH_FOR_SKIP_LIST = 3
 def parse_skip(skip):
     for i in range(0, len(skip)):
         if skip[i] == "-":
-            return int(skip[0:i]), int(skip[i+1:])
+            return int(skip[0:i]), int(skip[i + 1:])
 
 
 @total_ordering
@@ -101,7 +101,6 @@ class Posting:
         else:
             store_rep = f"{store_rep};"
         return store_rep
-
 
     @staticmethod
     def from_store_format(data, with_positions):
@@ -173,7 +172,7 @@ class TermPosting:
                     # optimization for first segement and when there is only one
                     self.skips = term_posting.skips
                 else:
-                    self.skips = self.skips + [[skip[0], skip[1]+current_offset] for skip in term_posting.skips]
+                    self.skips = self.skips + [[skip[0], skip[1] + current_offset] for skip in term_posting.skips]
             self.postings = self.postings + term_posting.postings
 
     def __iter__(self):
@@ -187,7 +186,7 @@ class TermPosting:
     @staticmethod
     def from_store_format(value, with_positions=True, with_skips=True):
         components = value.split("|")
-        first_occurrence =  None if components[0] == '' else components[0]
+        first_occurrence = None if components[0] == '' else components[0]
         termPosting = TermPosting(collecting_frequency=int(components[1]), first_occurrence=first_occurrence)
         if with_skips:
             skips = components[2].split(":")
@@ -195,3 +194,9 @@ class TermPosting:
         termPosting.postings = [Posting.from_store_format(posting, with_positions=with_positions) for posting in
                                 components[3:]]
         return termPosting
+
+    @staticmethod
+    def from_min_store_format(value):
+        components = value.split("|")
+        first_occurrence = None if components[0] == '' else components[0]
+        return TermPosting(collecting_frequency=int(components[1]), first_occurrence=first_occurrence)

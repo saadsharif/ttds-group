@@ -181,8 +181,8 @@ def optimize():
 @app.route('/build_suggest', methods=['POST', 'GET'])
 def build_trie():
     try:
-        success = index.update_suggester()
-        return jsonify({'ok': success}), 200
+        index.update_suggester()
+        return jsonify({'ok': True}), 200
     except TrieException as te:
         return jsonify(APIErrorSchema().dump(APIError('unable to update suggestions', {'exception': te.message}))), 400
     except Exception as ue:
