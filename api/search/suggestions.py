@@ -14,7 +14,7 @@ class Suggester:
         self._trie: Dict[str, Tuple[int, str]] = trie
         self._tokenizer = re.compile(r'\W+')
 
-    def add_segment(self, segment: Segment):
+    def add_segment(self, segment: Segment, reset_count=False):
         print(f"Building trie from segment {segment.segment_id}")
         k: str
         v: TermPosting
@@ -22,7 +22,7 @@ class Suggester:
         n = segment.num_terms
         for k, v in segment.terms():
             if self._valid_term(k):
-                self._add_term_to_trie(k, v.collection_frequency, occurrence=v.first_occurrence)
+                self._add_term_to_trie(k, v.collection_frequency, occurrence=v.first_occurrence, reset_count=reset_count)
             i += 1
             print_progress(i, n, label=f"Updating trie with segment {segment.segment_id}")
 
@@ -42,8 +42,8 @@ class Suggester:
         ret = list(map(lambda x: f"{' '.join(fixed)} {x[1][1].lower()}", matches))[:max_results]
         return ret
 
-    def _add_term_to_trie(self, term, count, occurrence=""):
-        if term in self._trie:
+    def _add_term_to_trie(self, term, count, occurrence="", reset_count=False):
+        if term in self._trie and not reset_count:
             (frequency, occurrence) = self._trie[term]
             self._trie[term] = (frequency + count, occurrence)
         else:
