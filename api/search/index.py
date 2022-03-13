@@ -244,11 +244,14 @@ class Index:
     def update_suggester(self):
         # so we consider the latest segment in suggestions as we don't read the buffer
         self.save()
+        i = 0
         try:
             self._segment_update_lock.acquire_read()
             for segment in self._segments:
                 segment.flush()
-                self._suggester.add_segment(segment)
+                reset_count = i == 0
+                self._suggester.add_segment(segment, reset_count=reset_count)
+                i += 1
         except Exception as e:
             self._segment_update_lock.release_read()
             raise TrieException(f"Unexpected exception during trie update - {e}")
