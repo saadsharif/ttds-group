@@ -4,7 +4,7 @@ import requests
 
 def optimize(host, port, target_segments):
     print(f"Optimizing to {target_segments}")
-    response = requests.get(f"http://{host}:{port}/optimize", timeout=3600)
+    response = requests.get(f"http://{host}:{port}/optimize", timeout=36000)
     while response.status_code == 200:
         body = response.json()
         before = body["segments"]["before"]
@@ -13,7 +13,7 @@ def optimize(host, port, target_segments):
         if after == target_segments:
             print("Target segments reached!")
             return
-        response = requests.get(f"http://{host}:{port}/optimize", timeout=3600)
+        response = requests.get(f"http://{host}:{port}/optimize", timeout=36000)
     print(f"Exited with unexpected {response.status_code} - {response.text}")
 
 
