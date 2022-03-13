@@ -2,6 +2,8 @@ import re
 
 import Stemmer
 
+MAX_TERM_LENGTH = 25
+
 
 class Analyzer:
     def __init__(self, stop_words=[], stem=True):
@@ -16,7 +18,7 @@ class Analyzer:
     def process_token(self, token):
 
         def filter_stop(token):
-            if token in self._stop_words:
+            if token in self._stop_words or len(token) > MAX_TERM_LENGTH:
                 return None
             return token
 
@@ -53,4 +55,3 @@ class Analyzer:
 
     def process_document(self, doc, keepOriginal=False):
         return self.process(str(doc), keepOriginal=keepOriginal)
-

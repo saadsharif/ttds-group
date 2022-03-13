@@ -22,6 +22,15 @@ parser.add_argument("-o", "--optimize", help="optimize to 1 segment on completio
 args = parser.parse_args()
 
 
+def build_suggestions(host, port):
+    print(f"Building suggestions")
+    response = requests.get(f"http://{host}:{port}/build_suggest", timeout=36000)
+    if response.status_code != 200:
+        print(f"Exited with unexpected {response.status_code} - {response.text}")
+        sys.exit(1)
+    print("DONE")
+
+
 def read_gz(filename):
     with gzip.open(filename, 'rt') as f:
         for line in f:
@@ -67,8 +76,8 @@ def read(doc_filename, vector_filename, reader):
         yield from reader(doc_filename)
 
 
-def index_batch(url, batch, isLast=False):
-    response = requests.post(f"{url}?flushTrie={isLast}", data="\n".join(batch))
+def index_batch(url, batch):
+    response = requests.post(f"{url}", data="\n".join(batch))
     if response.status_code != 200:
         print(f"Unable to index - {response.status_code} - {response.text}", flush=True)
         return 0, 0
@@ -117,7 +126,7 @@ for line in read(args.file, args.vector_file, reader):
         batch = []
 if len(batch) > 0:
     start = time.time()
-    success, failure = index_batch(url, batch, isLast=True)
+    success, failure = index_batch(url, batch)
     end = time.time()
     # this might leave us with fewer docs that asked for - if we have failures.
     # Complexity is not worth improving this.
@@ -127,10 +136,12 @@ if len(batch) > 0:
     if failure > 0:
         print(f"WARNING: {failure} doc{'s' if failure > 1 else ''} failed to index", flush=True)
 print("Flushing last segment...", end="", flush=True)
-response = requests.post(f"http://{args.host}:{args.port}/flush", timeout=3600)
+response = requests.post(f"http://{args.host}:{args.port}/flush", timeout=36000)
 if response.status_code == 200:
     print("OK")
     if args.optimize:
         optimize(args.host, args.port, 1)
 else:
     print(f"Flush failed with {response.status_code}")
+
+build_suggestions(args.host, args.port)

@@ -8,7 +8,7 @@ from bidict import bidict
 from utils.utils import print_progress
 from search.analyzer import Analyzer
 from search.bert import BERTModule
-from search.exception import IndexException, SearchException, MergeException
+from search.exception import IndexException, SearchException, MergeException, TrieException, StoreException
 from search.lock import ReadWriteLock
 from search.models import Result
 from search.posting import TermPosting
@@ -63,33 +63,38 @@ class Index:
             # we don't store the doc store
             del state['_doc_store']
             del state['_vector_store']
+            del state['_vector_model']
             del state['_write_lock']
             del state['_merge_lock']
             del state['_segment_update_lock']
+            del state['_suggester']
             # del state['_vector_model']
             pickle.dump(state, index_file)
             print("OK")
 
     # saves the index to disk - for now just pickle down given the sizes
     def save(self):
-        # we need to lock as we shouldn't index during flushing or vise versa
-        self._write_lock.acquire_write()
-        print(f"Syncing document store...", end="")
-        self._doc_store.sync()
-        print("OK")
-        print(f"Syncing vector store...", end="")
-        self._vector_store.sync()
-        print("OK")
-        if len(self._segments) > 0:
-            # flush the last segment if we need to
-            most_recent = self._segments[-1]
-            if not most_recent.is_flushed():
-                print(f"Flushing last segment...", end="")
-                self._suggester.add_from_segment_buffer()
-                most_recent.flush()
-                print("OK")
-        self._store_index_meta()
-        self._write_lock.release_write()
+        try:
+            # we need to lock as we shouldn't index during flushing or vise versa
+            self._write_lock.acquire_write()
+            print(f"Syncing document store...", end="")
+            self._doc_store.sync()
+            print("OK")
+            print(f"Syncing vector store...", end="")
+            self._vector_store.sync()
+            print("OK")
+            if len(self._segments) > 0:
+                # flush the last segment if we need to
+                most_recent = self._segments[-1]
+                if not most_recent.is_flushed():
+                    print(f"Flushing last segment...", end="")
+                    most_recent.flush()
+                    print("OK")
+            self._store_index_meta()
+            self._write_lock.release_write()
+        except Exception as e:
+            self._write_lock.release_write()
+            raise StoreException(f"Unexpected exception during flushing - {e}")
 
     def load(self):
         self._write_lock.acquire_write()
@@ -139,7 +144,6 @@ class Index:
             self._segment_update_lock.release_write()
             return self._segments[-1]
         if not most_recent.has_buffer_capacity():
-            self._suggester.add_from_segment_buffer()
             # segment is open but has no capacity so flush
             most_recent.flush()
             # insert new
@@ -148,7 +152,7 @@ class Index:
             self._segment_update_lock.release_write()
         return self._segments[-1]
 
-    def process_document(self, document, flushTrie=False):
+    def process_document(self, document):
         self._id_mappings[self._current_doc_id] = document.id
         terms_and_tokens = self.analyzer.process_document(document, keepOriginal=True)
         # this allows exact matching on doc value fields TODO: really we should have a different index for this
@@ -163,10 +167,7 @@ class Index:
         terms_and_tokens = doc_value_terms + terms_and_tokens
         # Flush trie if flushing segment
         segment = self.__get_writeable_segment()
-        self._suggester.copy_buffer(segment)
         segment.add_document(self._current_doc_id, terms_and_tokens, doc_values=doc_values)
-        if flushTrie:
-            self._suggester.add_from_segment_buffer()
 
     # this is an append only operation. We generated a new internal id for the document and store a mapping between the
     # the two. The passed id here must be unique - no updates supported, but can be anything.
@@ -193,7 +194,7 @@ class Index:
         return document.id, doc_id
 
     # this is more efficient than single document addition
-    def add_documents(self, documents, flushTrie=False):
+    def add_documents(self, documents):
         # enforce single threaded indexing
         failures = []
         doc_ids = []
@@ -224,8 +225,6 @@ class Index:
             # persists the vectors
             if len(vector_batch) > 0:
                 self._vector_store.update(vector_batch)
-            if flushTrie:
-                self._suggester.add_from_segment_buffer()
             self._write_lock.release_write()
         except Exception as e:
             self._write_lock.release_write()
@@ -242,6 +241,18 @@ class Index:
         vector = self._vector_store.get(str(id))
         return [] if vector is None else vector
 
+    def update_suggester(self):
+        # so we consider the latest segment in suggestions as we don't read the buffer
+        self.save()
+        try:
+            self._segment_update_lock.acquire_read()
+            for segment in self._segments:
+                segment.flush()
+                self._suggester.add_segment(segment)
+        except Exception as e:
+            self._segment_update_lock.release_read()
+            raise TrieException(f"Unexpected exception during trie update - {e}")
+
     def suggest(self, search):
         try:
             self._segment_update_lock.acquire_read()
@@ -252,11 +263,12 @@ class Index:
                 for term in matches:
                     [common, highlight] = [term[:search_length], term[search_length:]]
                     rets.append({
-                        'suggestion': term,
+                        'suggestion': term.strip(),
                         'highlight': f"{common}<b>{highlight}</b>"})
             self._segment_update_lock.release_read()
             return rets
         except Exception as e:
+            self._segment_update_lock.release_read()
             raise SearchException(f"Unexpected exception during querying - {e}")
 
     def search(self, query):

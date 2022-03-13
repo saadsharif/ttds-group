@@ -6,7 +6,7 @@
 
 ## Setup
 
-1. `sudo apt-get install python3-dev libunwind8-dev libffi-dev`
+1. `sudo apt-get install python3-dev libunwind8-dev libffi-dev gcc`
 2. `pip install -r requirements.txt`
 
 ## Running 
@@ -223,14 +223,39 @@ Use the following script for this:
 python utils/optimize.py --target_segments 1
 ```
 
-By default (no params), this script optimizes to a single segment. This can be called once all indexing is finished.
+By default, (no params), this script optimizes to a single segment. This can be called once all indexing is finished.
 
-## Running in Production
+## Deploying to Production
 
-`API_ENV=prod python api.py`
+### Preparing production environment
+
+1. `git clone git@github.com:saadsharif/ttds-group.git`
+2. `cd ttds-group/api/`
+3. `sudo apt update`
+4. `sudo apt install -y python3-virtualenv python3-dev libunwind8-dev libffi-dev gcc nginx`
+5. `virtualenv -p python3 .venv`
+6. `source .venv/bin/activate`
+7. `pip install -r requirements.txt`
+8. `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash`
+
+Once nvm is installed restart shell or use export provided.
+
+
+9. `nvm install v16.13.2`
+10. `cd ../search-ui/`
+11. `npm install`
+12. `npm run build`
+13. `cd ../api/`
+14. `sudo cp nginx.conf /etc/nginx/nginx.conf` - modify conf to include correct `server_name`.
+15. `tmux`
+16. `source .venv/bin/activate`
+17. `API_ENV=prod python api.py`
+18. ctl+d to background tmux
+19. `sudo systemctl restart nginx`
 
 Port and bind address can be set with `API_PORT` and `API_HOST` respectively.
-
 We use cherry as our production wsgi container.
 
-Note that it is single threaded but we don't expect this to be an issue.
+
+
+
