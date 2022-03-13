@@ -8,7 +8,7 @@ import time
 import requests
 
 # Initialize parser
-from optimize import optimize
+from optimize import optimize, build_suggestions
 
 parser = argparse.ArgumentParser(description="Indexing script")
 parser.add_argument("-f", "--file", help="ndjson file", required=True)
@@ -20,15 +20,6 @@ parser.add_argument("-m", "--max_docs", help="max docs. -1 is unlimited.", defau
 parser.add_argument("-c", "--is_compressed", help="compressed gz file", action='store_true')
 parser.add_argument("-o", "--optimize", help="optimize to 1 segment on completion", action='store_true')
 args = parser.parse_args()
-
-
-def build_suggestions(host, port):
-    print(f"Building suggestions")
-    response = requests.get(f"http://{host}:{port}/build_suggest", timeout=36000)
-    if response.status_code != 200:
-        print(f"Exited with unexpected {response.status_code} - {response.text}")
-        sys.exit(1)
-    print("DONE")
 
 
 def read_gz(filename):

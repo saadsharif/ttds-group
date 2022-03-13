@@ -1,4 +1,6 @@
 import argparse
+import sys
+
 import requests
 
 
@@ -17,6 +19,15 @@ def optimize(host, port, target_segments):
     print(f"Exited with unexpected {response.status_code} - {response.text}")
 
 
+def build_suggestions(host, port):
+    print(f"Building suggestions")
+    response = requests.get(f"http://{host}:{port}/build_suggest", timeout=36000)
+    if response.status_code != 200:
+        print(f"Exited with unexpected {response.status_code} - {response.text}")
+        sys.exit(1)
+    print("DONE")
+
+
 if __name__ == '__main__':
     # This script optimizes the index down to a target number of segments by repeatedly calling _optimize
     parser = argparse.ArgumentParser(description="Indexing script")
@@ -26,5 +37,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     optimize(args.host, args.port, args.target_segments)
-
-
+    build_suggestions(args.host, args.port)
