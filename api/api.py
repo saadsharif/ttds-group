@@ -1,4 +1,6 @@
 import atexit
+import time
+
 import ujson as json
 import os
 from json import JSONDecodeError
@@ -69,8 +71,9 @@ def suggest():
 @app.route('/search', methods=['POST'])
 def search():
     try:
+        start_time = time.time()
         hits, facets, total = index.search(SearchSchema().load(request.get_json()))
-        results = Results(hits, total, facets)
+        results = Results(hits, total, facets, round((time.time() - start_time), 3))
         return jsonify(ResultsSchema().dump(results)), 200
         # TODO: Pass the request to API and marshall the responses
     except ValidationError as e:
