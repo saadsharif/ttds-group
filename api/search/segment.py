@@ -99,20 +99,26 @@ class Segment:
 
     def get_doc_values(self, field, doc_id):
         # fast check to avoid lookups
-        if not field in self._doc_values:
-            return None
         if doc_id < self._min_doc_id:
             return None
         if doc_id > self._max_doc_id:
             return None
+        try:
+            self._doc_values[field]
+        except KeyError:
+            return None
         # check the cache first
-        if doc_id in self._doc_value_cache[field]:
+        try:
             return self._doc_value_cache[field][doc_id]
-        if doc_id in self._doc_values[field]:
+        except KeyError:
+            pass
+        try:
             values = json.loads(self._doc_values[field][doc_id])
             # insert into cache
             self._doc_value_cache[field][doc_id] = values
             return values
+        except KeyError:
+            pass
         return None
 
     # if with_positions is False we can use the postings file which is a smaller read
@@ -205,7 +211,7 @@ class Segment:
             self._doc_value_cache[field] = {}
             print(f"Loading field {field} in segment {self._segment_id}...")
             self._doc_values[field] = Store(path)
-            print(f"Field {field} loaded for segment {self._segment_id}")
+            print(f"Field {field} loaded for segment {self._segment_id} with {len(self._doc_values[field])} docs")
         print(f"Segment {self._segment_id} loaded")
 
     def positions_items(self):
