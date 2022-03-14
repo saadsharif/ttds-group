@@ -75,9 +75,9 @@ def from_store_format(data, with_positions):
 class Posting:
 
     __slots__ = ('doc_id', 'positions', 'skips', 'frequency')
-    def __init__(self, doc_id, positions=[], skips=[], frequency=0):
-        self.positions = positions
-        self.skips = skips
+    def __init__(self, doc_id, frequency=0):
+        self.positions = []
+        self.skips = []
         self.doc_id = doc_id
         self.frequency = frequency
 
