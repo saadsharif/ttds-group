@@ -1,5 +1,6 @@
 import atexit
 import time
+import traceback
 
 import ujson as json
 import os
@@ -63,6 +64,7 @@ def suggest():
     except ValidationError as e:
         return jsonify(APIErrorSchema().dump(APIError('unable to parse search request', e.messages))), 400
     except Exception as ue:
+        print(traceback.format_exc())
         return jsonify(
             APIErrorSchema().dump(
                 APIError('unable to execute suggest - unexpected exception', {"exception": str(ue)}))), 400
@@ -77,10 +79,13 @@ def search():
         return jsonify(ResultsSchema().dump(results)), 200
         # TODO: Pass the request to API and marshall the responses
     except ValidationError as e:
+        print(traceback.format_exc())
         return jsonify(APIErrorSchema().dump(APIError('unable to parse search request', e.messages))), 400
     except SearchException as se:
+        print(traceback.format_exc())
         return jsonify(APIErrorSchema().dump(APIError('unable to execute search', {"exception": se.message}))), 400
     except Exception as ue:
+        print(traceback.format_exc())
         return jsonify(
             APIErrorSchema().dump(
                 APIError('unable to execute search - unexpected exception', {"exception": str(ue)}))), 400
@@ -97,12 +102,16 @@ def index_doc():
             'internal_id': iid
         }), 201
     except ValidationError as e:
+        print(traceback.format_exc())
         return jsonify(APIErrorSchema().dump(APIError('unable to parse index request', e.messages))), 400
     except IndexException as ie:
+        print(traceback.format_exc())
         return jsonify(APIErrorSchema().dump(APIError('unable to index index document', {'index': ie.message}))), 400
     except StoreException as se:
+        print(traceback.format_exc())
         return jsonify(APIErrorSchema().dump(APIError('unable to persist documents', {'index': se.message}))), 400
     except Exception as ue:
+        print(traceback.format_exc())
         return jsonify(
             APIErrorSchema().dump(
                 APIError('unable to execute index - unexpected exception', {"exception": str(ue)}))), 400
@@ -140,10 +149,13 @@ def bulk_index():
             'failures': failures,
         }), 200
     except IndexException as ie:
+        print(traceback.format_exc())
         return jsonify(APIErrorSchema().dump(APIError('unable to index documents', {'index': ie.message}))), 400
     except StoreException as se:
+        print(traceback.format_exc())
         return jsonify(APIErrorSchema().dump(APIError('unable to persist documents', {'index': se.message}))), 400
     except Exception as ue:
+        print(traceback.format_exc())
         return jsonify(
             APIErrorSchema().dump(
                 APIError('unable to execute bulk_index - unexpected exception', {"exception": str(ue)}))), 400
@@ -157,8 +169,10 @@ def flush():
         index.save()
         return jsonify({'ok': True}), 200
     except StoreException as se:
+        print(traceback.format_exc())
         return jsonify(APIErrorSchema().dump(APIError('unable to persist documents', {'index': se.message}))), 400
     except Exception as ue:
+        print(traceback.format_exc())
         return jsonify(
             APIErrorSchema().dump(
                 APIError('unable to execute flush - unexpected exception', {"exception": str(ue)}))), 400
@@ -174,8 +188,10 @@ def optimize():
             "after": after
         }}), 200
     except MergeException as se:
+        print(traceback.format_exc())
         return jsonify(APIErrorSchema().dump(APIError('unable to merge segments', {'index': se.message}))), 400
     except Exception as ue:
+        print(traceback.format_exc())
         return jsonify(
             APIErrorSchema().dump(
                 APIError('unable to execute optimize - unexpected exception', {"exception": str(ue)}))), 400
@@ -187,8 +203,10 @@ def build_trie():
         index.update_suggester()
         return jsonify({'ok': True}), 200
     except TrieException as te:
+        print(traceback.format_exc())
         return jsonify(APIErrorSchema().dump(APIError('unable to update suggestions', {'exception': te.message}))), 400
     except Exception as ue:
+        print(traceback.format_exc())
         return jsonify(
             APIErrorSchema().dump(
                 APIError('unable to execute build_suggest - unexpected exception', {"exception": str(ue)}))), 400
