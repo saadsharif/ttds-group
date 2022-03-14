@@ -61,19 +61,25 @@ def parse_skip(skip):
         if skip[i] == "-":
             return int(skip[0:i]), int(skip[i + 1:])
 
+def from_store_format(data, with_positions):
+    components = data.split(";")
+    posting = Posting(int(components[0]))
+    posting.frequency = int(components[1])
+    if with_positions:
+        posting.positions = list(map(int, components[2].split(":")))
+        skips = components[3].split(":")
+        posting.skips = [parse_skip(skip) for skip in skips if skip != ""]
+    return posting
 
 @total_ordering
 class Posting:
 
-    def __init__(self, doc_id):
-        self.positions = []
-        self.skips = []
-        self._doc_id = doc_id
-        self.frequency = 0
-
-    @property
-    def doc_id(self):
-        return self._doc_id
+    __slots__ = ('doc_id', 'positions', 'skips', 'frequency')
+    def __init__(self, doc_id, positions=[], skips=[], frequency=0):
+        self.positions = positions
+        self.skips = skips
+        self.doc_id = doc_id
+        self.frequency = frequency
 
     @property
     def posting(self):
@@ -92,7 +98,7 @@ class Posting:
         return iter(self.positions)
 
     def to_store_format(self, with_positions):
-        store_rep = f"{self._doc_id};{self.frequency};"
+        store_rep = f"{self.doc_id};{self.frequency};"
         if with_positions:
             store_rep = f"{store_rep}{':'.join(str(pos) for pos in self.positions)};"
             skips = _generate_skips(self.positions)
@@ -101,18 +107,6 @@ class Posting:
         else:
             store_rep = f"{store_rep};"
         return store_rep
-
-    @staticmethod
-    def from_store_format(data, with_positions):
-        components = data.split(";")
-        posting = Posting(int(components[0]))
-        posting.frequency = int(components[1])
-        if with_positions:
-            positions = components[2].split(":")
-            posting.positions = [int(pos) for pos in positions]
-            skips = components[3].split(":")
-            posting.skips = [parse_skip(skip) for skip in skips if skip != ""]
-        return posting
 
     def __eq__(self, other):
         return self.doc_id == other.doc_id
@@ -191,7 +185,7 @@ class TermPosting:
         if with_skips:
             skips = components[2].split(":")
             termPosting.skips = [parse_skip(skip) for skip in skips if skip != ""]
-        termPosting.postings = [Posting.from_store_format(posting, with_positions=with_positions) for posting in
+        termPosting.postings = [from_store_format(posting, with_positions=with_positions) for posting in
                                 components[3:]]
         return termPosting
 

@@ -185,6 +185,10 @@ The following additional functionality is supported:
 
 ## Thread safety
 
+We support concurrent querying but only single threaded indexing. A number of read-write locks are used to achieve this. Our read-write lock allows concurrent reads but only single threaded writes. Writes must wait for all reads to complete before executing and reads are blocked whilst a write occurs. Note, the use of these locks. They do not prevent concurrent querying and indexing - only protecting key state changes. Specifically:
+
+- 
+
 
 ## API
 
