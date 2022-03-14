@@ -5,7 +5,6 @@ import time
 import traceback
 import uuid
 from bidict import bidict
-from utils.utils import print_progress
 from search.analyzer import Analyzer
 from search.bert import BERTModule
 from search.exception import IndexException, SearchException, MergeException, TrieException, StoreException
