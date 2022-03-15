@@ -33,7 +33,7 @@ class Document:
 
 
 class Search:
-    def __init__(self, query, score, max_results, offset, fields=[], facets=[], filters=[], vector_score=0):
+    def __init__(self, query, score, max_results, offset, fields=[], facets=[], filters=[], use_hnsw=True, max_distance=0):
         self.query = query
         self.score = score
         self.filters = filters
@@ -41,12 +41,15 @@ class Search:
         self.fields = fields
         self.max_results = max_results
         self.offset = offset
-        self.vector_score = vector_score
+        self.use_hnsw = use_hnsw
+        self.max_distance = max_distance
+
 
 class SuggestionSearch:
     def __init__(self, query, max_results):
         self.query = query
         self.max_results = max_results
+
 
 class Facet:
     def __init__(self, field, num_values):
