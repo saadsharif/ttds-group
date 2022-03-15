@@ -20,6 +20,7 @@ from search.posting import ScoredPosting, Posting, TermPosting, VectorPosting
 PHRASE_TESTER = re.compile("\"(.*)\"")
 PROXIMITY_TESTER = re.compile("#[1-9][0-9]*\(.*\)")
 
+
 class Query:
 
     def __init__(self, index):
@@ -95,17 +96,22 @@ class Query:
 
     def _evaluate_and(self, components, condition, score=False):
         self._with_posting_skips = True
-        intersection = []
         left_term_posting = self.evaluate(components[0], condition=condition, score=score)
         right_term_posting = self.evaluate(components[1], condition=condition, score=score)
+        if left_term_posting.is_stop_word or right_term_posting.is_stop_word:
+            return self._execute_or(left_term_posting, right_term_posting)
+        intersection = self._execute_and(left_term_posting, right_term_posting, condition, score=score)
+        self._with_posting_skips = False
+        return intersection
+
+    def _execute_and(self, left_term_posting, right_term_posting, condition, score=False):
+        intersection = []
         li = 0
         ri = 0
         ls = 0
         rs = 0
         left_skips = left_term_posting.skips
         right_skips = right_term_posting.skips
-        if left_term_posting.is_stop_word or right_term_posting.is_stop_word:
-            return self._execute_or(left_term_posting, right_term_posting)
         left_postings = left_term_posting.postings
         right_postings = right_term_posting.postings
         while li < len(left_postings) and ri < len(right_postings):
@@ -137,7 +143,6 @@ class Query:
                         intersection.append(left_posting)
                 li += 1
                 ri += 1
-        self._with_posting_skips = False
         term_posting = TermPosting()
         term_posting.postings = intersection
         return term_posting
@@ -351,9 +356,11 @@ class Query:
                 docs.append(VectorPosting(ids[0][i], 1 - distances[0][i]))
             if len(filters) > 0:
                 parsed = self._parser(filter_query)
-                filtered_docs = self.evaluate(parsed[0], score=score).postings
+                filtered_docs = self.evaluate(parsed[0], score=score)
+                vector_posting = TermPosting()
+                vector_posting.postings = docs
                 # intersect filtered with hnsw
-                # TODO
+                docs = self._execute_and(vector_posting, filtered_docs, lambda left, right, args={}: True, score=False).postings
         else:
             query = f"{query} AND {filter_query}"
             parsed = self._parser(query)

@@ -26,6 +26,8 @@ def _generate_skips(positions):
 class VectorPosting:
     doc_id: int
     score: float
+    # purely so we can use the same intersect functions on results when filtering vector postings
+    skips = []
 
 
 @total_ordering
