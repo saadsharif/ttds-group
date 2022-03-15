@@ -358,6 +358,9 @@ class Query:
                 parsed = self._parser(filter_query)
                 filtered_docs = self.evaluate(parsed[0], score=score)
                 vector_posting = TermPosting()
+                # unfortunately need in doc id order for fast intersection - might be worth building a custom
+                # intersect to avoid
+                docs.sort(key=lambda p: p.doc_id)
                 vector_posting.postings = docs
                 # intersect filtered with hnsw
                 docs = self._execute_and(vector_posting, filtered_docs, lambda left, right, args={}: True, score=False).postings
