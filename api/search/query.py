@@ -341,7 +341,7 @@ class Query:
 
     def execute(self, query, filters, score, max_results, offset, facets, use_hnsw=True, max_distance=0.2):
         filters = [f"{filter.field}:{'_'.join(self._index.analyzer.tokenize(filter.value))}" for filter in filters]
-        filter_query = "AND".join(filters)
+        filter_query = " AND ".join(filters)
         if use_hnsw and self._is_natural_language(query):
             print("Executing natural language search")
             ids, distances = self._index.find_closest_vectors(query)
