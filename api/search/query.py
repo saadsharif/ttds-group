@@ -1,5 +1,6 @@
 import heapq
 import math
+import re
 from operator import itemgetter
 
 from pyparsing import (
@@ -13,9 +14,11 @@ from pyparsing import (
     OneOrMore,
     oneOf,
 )
-from scipy import spatial
 
-from search.posting import ScoredPosting, Posting, TermPosting
+from search.posting import ScoredPosting, Posting, TermPosting, VectorPosting
+
+PHRASE_TESTER = re.compile("\"(.*)\"")
+PROXIMITY_TESTER = re.compile("#[1-9][0-9]*\(.*\)")
 
 
 class Query:
@@ -93,17 +96,22 @@ class Query:
 
     def _evaluate_and(self, components, condition, score=False):
         self._with_posting_skips = True
-        intersection = []
         left_term_posting = self.evaluate(components[0], condition=condition, score=score)
         right_term_posting = self.evaluate(components[1], condition=condition, score=score)
+        if left_term_posting.is_stop_word or right_term_posting.is_stop_word:
+            return self._execute_or(left_term_posting, right_term_posting)
+        intersection = self._execute_and(left_term_posting, right_term_posting, condition, score=score)
+        self._with_posting_skips = False
+        return intersection
+
+    def _execute_and(self, left_term_posting, right_term_posting, condition, score=False):
+        intersection = []
         li = 0
         ri = 0
         ls = 0
         rs = 0
         left_skips = left_term_posting.skips
         right_skips = right_term_posting.skips
-        if left_term_posting.is_stop_word or right_term_posting.is_stop_word:
-            return self._execute_or(left_term_posting, right_term_posting)
         left_postings = left_term_posting.postings
         right_postings = right_term_posting.postings
         while li < len(left_postings) and ri < len(right_postings):
@@ -135,7 +143,6 @@ class Query:
                         intersection.append(left_posting)
                 li += 1
                 ri += 1
-        self._with_posting_skips = False
         term_posting = TermPosting()
         term_posting.postings = intersection
         return term_posting
@@ -322,40 +329,52 @@ class Query:
                     sorted(facet_values[facet.field].items(), key=itemgetter(1), reverse=True)[:facet.num_values])
         return facet_values
 
-    def execute(self, query, score, max_results, offset, facets, vector_score=0):
-        parsed = self._parser(query)
-        docs = self.evaluate(parsed[0], score=score).postings
+    def _is_natural_language(self, query_text):
+        boolean = "NOT" in query_text or "AND" in query_text or "OR" in query_text
+        if boolean:
+            return False
+        if re.match(PHRASE_TESTER, query_text) is not None:
+            return False
+        if re.match(PROXIMITY_TESTER, query_text) is not None:
+            return False
+        return True
+
+    def execute(self, query, filters, score, max_results, offset, facets, use_hnsw=True, max_distance=0.2):
+        filters = [f"{filter.field}:{'_'.join(self._index.analyzer.tokenize(filter.value))}" for filter in filters]
+        filter_query = "AND".join(filters)
+        if use_hnsw and self._is_natural_language(query):
+            print("Executing natural language search")
+            ids, distances = self._index.find_closest_vectors(query)
+            docs = []
+            # could do a binary search here but we ultimately need to iterate all values anyway to produce
+            # vector postings - we could remove the need for the vector postings object but needs a refactor - change
+            # only if performance an issue
+            for i in range(len(ids[0])):
+                if distances[0][i] > max_distance:
+                    break
+                # invert the distance to score
+                docs.append(VectorPosting(ids[0][i], 1 - distances[0][i]))
+            if len(filters) > 0:
+                parsed = self._parser(filter_query)
+                filtered_docs = self.evaluate(parsed[0], score=score)
+                vector_posting = TermPosting()
+                # unfortunately need in doc id order for fast intersection - might be worth building a custom
+                # intersect to avoid
+                docs.sort(key=lambda p: p.doc_id)
+                vector_posting.postings = docs
+                # intersect filtered with hnsw
+                docs = self._execute_and(vector_posting, filtered_docs, lambda left, right, args={}: True, score=False).postings
+        else:
+            query = f"{query} AND {filter_query}"
+            parsed = self._parser(query)
+            docs = self.evaluate(parsed[0], score=score).postings
         facet_values = {}
         if len(facets) > 0:
             facet_values = self._get_facets(facets, docs)
         # we would add pagination here
         if score and len(docs) > 0:
             # if we have an offset we need offset + max_results
-            if vector_score == 0:
-                sorted_docs = heapq.nlargest(max_results + offset, docs, key=lambda doc: doc.score)
-                return sorted_docs[offset:offset + max_results], facet_values, len(docs)
-            else:
-                # for re-scoring we need the full sorted list
-                sorted_docs = heapq.nlargest(len(docs), docs, key=lambda doc: doc.score)
-                max_score = sorted_docs[0].score
-                # TODO: improve this as it includes boolean operators potentially
-                query_string = query.lower()
-                query_vector = self._index.get_vector(query_string)
-                s = 0
-                # re-score the top N
-                for doc in sorted_docs:
-                    doc_vector = self._index.get_document_vector(doc.doc_id)
-                    # we add the distance to the max score of the query - this ensures our re-scored are on the top
-                    if len(doc_vector) == len(query_vector):
-                        doc.score = spatial.distance.cosine(doc_vector, query_vector) + max_score
-                    else:
-                        print(
-                            f"WARNING: not re-scoring docs {doc.doc_id} as doc vector length[{len(doc_vector)}] is different than query vector length[{len(query_vector)}]")
-                    if s == vector_score:
-                        break
-                    s += 1
-                return heapq.nlargest(max_results + offset, docs, key=lambda doc: doc.score)[
-                       offset:offset + max_results], facet_values, len(docs)
-
+            sorted_docs = heapq.nlargest(max_results + offset, docs, key=lambda doc: doc.score)
+            return sorted_docs[offset:offset + max_results], facet_values, len(docs)
         return heapq.nsmallest(max_results, docs, key=lambda doc: doc.doc_id)[
                offset:offset + max_results], facet_values, len(docs)

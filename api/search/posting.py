@@ -1,4 +1,5 @@
 import math
+from dataclasses import dataclass
 from functools import total_ordering
 
 
@@ -19,6 +20,14 @@ def _generate_skips(positions):
                 skip_index += skip_period
             pos_index += 1
     return skips
+
+
+@dataclass
+class VectorPosting:
+    doc_id: int
+    score: float
+    # purely so we can use the same intersect functions on results when filtering vector postings
+    skips = []
 
 
 @total_ordering
@@ -61,6 +70,7 @@ def parse_skip(skip):
         if skip[i] == "-":
             return int(skip[0:i]), int(skip[i + 1:])
 
+
 def from_store_format(data, with_positions):
     components = data.split(";")
     posting = Posting(int(components[0]))
@@ -71,10 +81,11 @@ def from_store_format(data, with_positions):
         posting.skips = [parse_skip(skip) for skip in skips if skip != ""]
     return posting
 
+
 @total_ordering
 class Posting:
-
     __slots__ = ('doc_id', 'positions', 'skips', 'frequency')
+
     def __init__(self, doc_id, frequency=0):
         self.positions = []
         self.skips = []

@@ -4,6 +4,7 @@ import sys
 import time
 import traceback
 import uuid
+import hnswlib
 from bidict import bidict
 from search.analyzer import Analyzer
 from search.bert import BERTModule
@@ -15,6 +16,11 @@ from search.query import Query
 from search.segment import Segment, _create_segment_id
 from search.store import DocumentStore
 from search.suggestions import Suggester
+
+VECTOR_DIMENSIONS = 768
+MAX_VECTOR_DOCUMENTS = 500000
+MAX_VECTOR_RESULTS = 10000
+CORES = os.cpu_count()
 
 
 class Index:
@@ -48,11 +54,15 @@ class Index:
         self._merge_lock = ReadWriteLock()
         # merge update - this is used when we update the list of segments post merge - reads can't occur during this
         self._segment_update_lock = ReadWriteLock()
-        # vector store
-        self._vector_store = DocumentStore.open(os.path.join(self._storage_path, 'vectors.db'), 'c')
+        # hsnw
+        self._hnsw_model = hnswlib.Index(space='cosine', dim=VECTOR_DIMENSIONS)
+        self._docs_added = False
 
     def _get_db_path(self):
         return os.path.join(self._storage_path, 'index.idb')
+
+    def _get_hnsw_path(self):
+        return os.path.join(self._storage_path, 'index.hnsw')
 
     # not thread safe and pickles the index - mostly meta and doc ids
     def _store_index_meta(self):
@@ -61,12 +71,12 @@ class Index:
             state = self.__dict__.copy()
             # we don't store the doc store
             del state['_doc_store']
-            del state['_vector_store']
             del state['_vector_model']
             del state['_write_lock']
             del state['_merge_lock']
             del state['_segment_update_lock']
             del state['_suggester']
+            del state['_hnsw_model']
             # del state['_vector_model']
             pickle.dump(state, index_file)
             print("OK")
@@ -79,9 +89,6 @@ class Index:
             print(f"Syncing document store...", end="")
             self._doc_store.sync()
             print("OK")
-            print(f"Syncing vector store...", end="")
-            self._vector_store.sync()
-            print("OK")
             if len(self._segments) > 0:
                 # flush the last segment if we need to
                 most_recent = self._segments[-1]
@@ -90,6 +97,12 @@ class Index:
                     most_recent.flush()
                     print("OK")
             self._store_index_meta()
+            if self._docs_added:
+                print("Saving hnsw index to disk...", end="")
+                with open(self._get_hnsw_path(), 'wb') as hnsw_file:
+                    pickle.dump(self._hnsw_model, hnsw_file)
+                print("OK")
+            self._docs_added = False
             self._write_lock.release_write()
         except Exception as e:
             self._write_lock.release_write()
@@ -99,10 +112,19 @@ class Index:
         self._write_lock.acquire_write()
         if os.path.isfile(self._get_db_path()):
             with open(self._get_db_path(), 'rb') as index_file:
-                print("Loading index...")
+                print("Loading inverted index...", end="")
                 index = pickle.load(index_file)
                 self.__dict__.update(index)
-                print("Index Loaded")
+                print("OK")
+        if os.path.isfile(self._get_hnsw_path()):
+            with open(self._get_hnsw_path(), 'rb') as hnsw_file:
+                print("Loading hnsw index...", end="")
+                index = pickle.load(hnsw_file)
+                self._hnsw_model = index
+                print("OK")
+        if self._hnsw_model.max_elements == 0:
+            # we assume we haven't initialized if 0 max elements
+            self._hnsw_model.init_index(max_elements=MAX_VECTOR_DOCUMENTS, ef_construction=200, M=16)
         self._write_lock.release_write()
 
     # closes the index
@@ -113,7 +135,6 @@ class Index:
             segment.close()
         print("OK")
         self._doc_store.close()
-        self._vector_store.close()
 
     # theoretically merges segments together to avoid too many files -
     # really an optimisation if we needed as non-trivial
@@ -180,9 +201,10 @@ class Index:
             self.process_document(document, flushTrie=True)
             # persist to the db
             self._doc_store[str(self._current_doc_id)] = document.fields
-            # persist vector
+            # add vector to hnsw
+            self._docs_added = True
             if len(document.vector) > 0:
-                self._vector_store[str(self._current_doc_id)] = document.vector
+                self._hnsw_model.add_items([document.vector], [self._current_doc_id])
             doc_id = self._current_doc_id
             self._current_doc_id += 1
             self._write_lock.release_write()
@@ -208,8 +230,10 @@ class Index:
                     docs_to_index.append(document)
             # this could be more efficient - i.e. we could optimise bulk additions - less locking and large write chunks
             if len(docs_to_index) > 0:
+                self._docs_added = True
                 doc_batch = {}
-                vector_batch = {}
+                vector_batch = []
+                v_doc_ids = []
                 n = len(docs_to_index)
                 print(f"Indexing {n} documents...", end="")
                 for idx, document in enumerate(docs_to_index):
@@ -217,14 +241,15 @@ class Index:
                     doc_ids.append((document.id, self._current_doc_id))
                     doc_batch[str(self._current_doc_id)] = document.fields
                     if len(document.vector) > 0:
-                        vector_batch[str(self._current_doc_id)] = document.vector
+                        vector_batch.append(document.vector)
+                        v_doc_ids.append(self._current_doc_id)
                     self._current_doc_id += 1
                 print("OK")  # done with the progress
                 # persists the batch to the db
                 self._doc_store.update(doc_batch)
                 # persists the vectors
                 if len(vector_batch) > 0:
-                    self._vector_store.update(vector_batch)
+                    self._hnsw_model.add_items(vector_batch, v_doc_ids)
             self._write_lock.release_write()
         except Exception as e:
             self._write_lock.release_write()
@@ -237,9 +262,13 @@ class Index:
             return doc
         return {field: doc[field] for field in fields if field in doc}
 
-    def get_document_vector(self, id):
-        vector = self._vector_store.get(str(id))
-        return [] if vector is None else vector
+    def find_closest_vectors(self, query):
+        query_vector = self._vector_model.embed(query, sentwise=False)
+        self._hnsw_model.set_ef(50)
+        # we need all for facets
+        max_vectors = self._hnsw_model.element_count - 1 if self._hnsw_model.element_count < MAX_VECTOR_RESULTS \
+            else MAX_VECTOR_RESULTS
+        return self._hnsw_model.knn_query(query_vector, k=max_vectors, num_threads=CORES)
 
     def update_suggester(self):
         # so we consider the latest segment in suggestions as we don't read the buffer
@@ -277,12 +306,9 @@ class Index:
     def search(self, query):
         # filters are currently appended as an AND phrase - this isn't ideal but these doc value fields are also indexed
         try:
-            filters = [f"{filter.field}:{'_'.join(self.analyzer.tokenize(filter.value))}" for filter in query.filters]
-            query_text = query.query
-            for filter in filters:
-                query_text = f"{query_text} AND {filter}"
-            docs, facets, total = Query(self).execute(query_text, query.score, query.max_results, query.offset,
-                                                      query.facets, vector_score=query.vector_score)
+            docs, facets, total = Query(self).execute(query.query, query.filters, query.score, query.max_results, query.offset,
+                                                      query.facets, use_hnsw=query.use_hnsw,
+                                                      max_distance=query.max_distance)
 
             fields = set(query.fields)
             return [Result(self._id_mappings[doc.doc_id], doc.score, fields=self._get_document(str(doc.doc_id), fields))
@@ -305,9 +331,6 @@ class Index:
                     combined_posting.add_term_info(term_posting, update_skips=True)
         self._segment_update_lock.release_read()
         return combined_posting
-
-    def get_vector(self, query):
-        return self._vector_model.embed(query, sentwise=False)
 
     def has_doc_id(self, field):
         return field in self._doc_value_fields

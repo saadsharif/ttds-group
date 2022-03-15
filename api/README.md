@@ -231,12 +231,11 @@ By default, (no params), this script optimizes to a single segment. This can be 
 
 1. `git clone git@github.com:saadsharif/ttds-group.git`
 2. `cd ttds-group/api/`
-3. `sudo apt update`
-4. `sudo apt install -y python3-virtualenv python3-dev libunwind8-dev libffi-dev gcc nginx`
-5. `virtualenv -p python3 .venv`
-6. `source .venv/bin/activate`
-7. `pip install -r requirements.txt`
-8. `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash`
+3. `sudo apt update && sudo apt install -y python3-virtualenv python3-dev libunwind8-dev libffi-dev gcc nginx`
+4. `virtualenv -p python3 .venv`
+5. `source .venv/bin/activate`
+6. `pip install -r requirements.txt`
+7. `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash`
 
 Once nvm is installed restart shell or use export provided.
 

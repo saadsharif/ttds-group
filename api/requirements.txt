@@ -9,6 +9,7 @@ colorama==0.4.4
 datrie==0.8.2
 filelock==3.5.0
 Flask==2.0.2
+hnswlib==0.6.2
 huggingface-hub==0.4.0
 idna==3.3
 itsdangerous==2.0.1
@@ -27,6 +28,7 @@ nltk==3.7
 numpy==1.22.2
 packaging==21.3
 Pillow==9.0.1
+pydevd-pycharm==221.4165.171
 pyparsing==3.0.7
 pysimdjson==4.0.3
 PyStemmer==2.0.1
