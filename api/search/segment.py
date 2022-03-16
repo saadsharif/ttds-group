@@ -247,6 +247,7 @@ class Segment:
     def close(self):
         self._buffer.clear()
         self._doc_value_cache.clear()
+        self._postings_index.close()
         self._positions_index.close()
         for doc_values in self._doc_values.values():
             doc_values.close()
