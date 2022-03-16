@@ -1896,5 +1896,5 @@ if args.file:
                     print(f"no mapping for {subject}")
                     sys.exit(1)
                 mapped_subjects.append(CATEGORIES[subject]["name"])
-            doc["subject"] = mapped_subjects
+            doc["subject"] = list(set(mapped_subjects))
             output_file.write(json.dumps(doc)+"\n")

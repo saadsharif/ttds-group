@@ -330,6 +330,10 @@ class Query:
         return facet_values
 
     def _is_natural_language(self, query_text):
+        # single term queries are not NL - insufficient information
+        terms = self._index.analyzer.tokenize(query_text)
+        if len(terms) == 1:
+            return False
         boolean = "NOT" in query_text or "AND" in query_text or "OR" in query_text
         if boolean:
             return False

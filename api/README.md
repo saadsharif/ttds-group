@@ -6,7 +6,7 @@
 
 ## Setup
 
-1. `sudo apt-get install python3-dev libunwind8-dev libffi-dev gcc`
+1. `sudo apt-get install python3-dev libunwind8-dev libffi-dev gcc build-essential`
 2. `pip install -r requirements.txt`
 
 ## Running 
