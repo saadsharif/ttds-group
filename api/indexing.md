@@ -1,11 +1,11 @@
 # Search Engine
 
-In order to service boolean and proximity queries we maintain an inverted index. This discusses the structure of this index, its storage format on disk and how queries are executed. Free text queries, defined as those with the absence of any Boolean operator, are routed to HNSW vector matching and do not use these structures.
+In order to service boolean and proximity queries, we maintain an inverted index. This discusses the structure of this index, its storage format on disk and how queries are executed. Free text queries, defined as those with the absence of any boolean, phrase and proximity operator, are routed to HNSW vector matching. These structures are still utilised for ancillary operations, however, such as filtering and faceting.
 
 ## Assumptions
 
 1. Documents are provided in JSON format. For bulk indexing, ndjson is supported. All communications occur through a REST interface.
-2. Indexing is single threaded. Only one thread can update the index at any time. During a batch update, the index structures are available to reads but not writes. Other indexing threads will be blocked until the previous batch completes.
+2. Indexing is single-threaded. Only one thread can update the index at any time. During a batch update, the index structures are available to reads but not writes. Other indexing threads will be blocked until the previous batch completes.
 3. Documents can only be appended to the index. We currently do not support updates or delete operations.
 
 ### Tokenisation & Stemming
@@ -18,13 +18,13 @@ Tokenisation and Stemming are performed before indexing. The same process is per
   2. Dropped if it matches a pre-defined stop word list<sup>[13]</sup>.
   3. Stemmed using the Porter stemming algorithm - via the package `Stemmer`. Performance profiling indicated this to be the most performant stemmer.
 
-All fields passed during indexing are concatenated into a single string. **Positions are calculated once all tokenisation and stemming has been performed**. Note that this can result in false positives for phrase and proximity matching, e.g. the query "the cat jumped over the dog" becomes "cat jumped dog" with positions 1,2,3. This can phrase could potentially be matched against "a cat jumped under a dog". Exact phrase matching may also result in false positives due to stemming.
+All fields passed during indexing are concatenated into a single string. **Positions are calculated once all tokenisation and stemming have been performed**. Note that this can result in false positives for phrase and proximity matching, e.g. the query "the cat jumped over the dog" becomes "cat jumped dog" with positions 1,2,3. This can phrase could potentially be matched against "a cat jumped under a dog". Exact phrase matching may also result in false positives due to stemming.
  
-Tokenization also preverses the original token for a term (i.e. its first occurence) for use in the suggester. These unstemmed forms are, however, not indexed.
+Tokenization also preserves the original token for a term (i.e. its first occurrence) for use in the suggester. These unstemmed forms are, however, not indexed.
 
 ### Document Ids
 
-All documents recieve a unique internal document identifier. This is a monotonically increasing integer starting at 1. Users must provide a unique external idenfifier that can be any arbitrary string. A bi-directional, in memory mapping, is inturn maintained between the two identifiers. This internal document identifier ensures that postings for a term are sorted. This aids query evaluation and allows efficient algorithms such as Linear merge to be utilised during query evaluation - see [Boolean Search Functions & Query Evaluation](#search-functions-&-query-evaluation). All of the document structures described below use this internal document id. As a result, query evaluation also returns internal document ids, which are mapped back to the original ids before being returned. The dictionary used to store these mappings represents a low memory overhead and allows document ids to be arbitrary.
+All documents receive a unique internal document identifier. This is a monotonically increasing integer starting at 1. Users must provide a unique external identifier that can be any arbitrary string. A bi-directional, in-memory mapping, is inturn maintained between the two identifiers. This internal document identifier ensures that postings for a term are sorted. This aids query evaluation and allows efficient algorithms such as Linear merge to be utilised during query evaluation - see [Boolean Search Functions & Query Evaluation](#search-functions-&-query-evaluation). All of the document structures described below use this internal document id. As a result, query evaluation also returns internal document ids, which are mapped back to the original ids before being returned. The dictionary used to store these mappings represents a low memory overhead and allows document ids to be arbitrary.
 
 #### Utility functions
 
@@ -35,26 +35,25 @@ All documents recieve a unique internal document identifier. This is a monotonic
 The following data structures are peripheral to actual search but used during or after query evaluation:
 
 1. A [LMDB Lightning database](https://lmdb.readthedocs.io/en/release/) for documents themselves. Documents are persisted as JSON with their internal id used as the primary key. This structure is only used to return the original documents in results once hits have been identified.
-2. [Bi-directional in memory dictionary](https://pypi.org/project/bidict/) of the internal to external id i.e. a lookup can be performed in any direction. This structure is used to ensure indexed documents are not duplicated and have unique ids. All internal query evaluation occurs using internal identifiers. These are in turn converted back to external ids when returning results to the user.
+2. [Bi-directional in-memory dictionary](https://pypi.org/project/bidict/) of the internal to external id i.e. a lookup can be performed in any direction. This structure is used to ensure indexed documents are not duplicated and have unique ids. All internal query evaluation occurs using internal identifiers. These are in turn converted back to external ids when returning results to the user.
 
 #### Search Structures
 
 **Internal Store**
 
-In order to ensure the index is not memory bound, most search index structures are overloaded to disk. We use direct IO and rely on FS caching for performance.  The principal storage stucture is a persistent HashMap [Store](https://github.com/saadsharif/ttds-group/blob/1a10886c4264657ee10ed144acc9f1b553263407/api/search/store.py#L28). This store is backed by a file. Any string value can be used as the key (usually a term or internal document id). These keys are held in memory as well as on disk - allowing them to be loaded into memory on restart. Insertion order of the keys is preserved. The value of this hashmap represents an offset to the position on disk. This offset is held in memory with the true value on disk only until accessed. When accessing the the value, the Store internally accesses the file, seeks to the relevant offset and returns the bytes stored. Writing to the map is an append operation, where the key is kept in memory and the value written to disk with the offset recorded. This Hashmap does not support updates i.e. insertions are immutable. 
+In order to ensure the index is not memory bound, most search index structures are overloaded to disk. We use direct IO and rely on FS caching for performance.  The principal storage structure is a persistent HashMap [Store](https://github.com/saadsharif/ttds-group/blob/1a10886c4264657ee10ed144acc9f1b553263407/api/search/store.py#L28). This store is backed by a file. Any string value can be used as the key (usually a term or internal document id). These keys are held in memory as well as on-disk - allowing them to be loaded into memory on restart. Insertion order of the keys is preserved. The value of this hashmap represents an offset to the position on the disk. This offset is held in memory with the true value on disk only until accessed. When accessing the value, the Store internally accesses the file, seeks to the relevant offset and returns the bytes stored. Writing to the map is an append operation, where the key is kept in memory and the value written to disk with the offset recorded. This Hashmap does not support updates i.e. insertions are immutable. 
 
-The key is stored on disk as a string with the value persisted as bytes. The Store itself is agnostic of the value type and can be used to store different information. Decoding and encoding of the value to and from the byte representation is left to user. Note, that reading from the store is thread safe but we assume single threaded writes. No locking is used for the latter, so we rely on higher level abstractions to ensure concurrent writes do not occur.
+The key is stored on disk as a string with the value persisted as bytes. The Store itself is agnostic of the value type and can be used to store different information. Decoding and encoding of the value to and from the byte representation are left to higher-level abstractions. Note, that reading from the store is thread-safe but we assume single-threaded writes. No locking is used for the latter, so we also rely on higher-level abstractions to ensure concurrent writes do not occur.
 
-1. **Doc values** - a file containing a mapping from the internal document id to the values for a field. This is for short string fields only e.g. authors, and is used for [faceting](#faceting--filtering) as well doc id look ups. Stored in doc id order. This uses the internal store for persistence. A cache is also implemented to accelerate doc id lookups. Exists per [Segment](#segments). Currently we store doc values for the `authors` and `subject` fields. This is visually shown below:
+1. **Doc values** - a file containing a mapping from the internal document id to the values for a field. This is for short string fields only e.g. authors and is used for [faceting](#faceting--filtering) as well doc id lookups. Stored in doc id order. This uses the internal store for persistence. A cache is also implemented to accelerate doc id lookups. Exists per [Segment](#segments). Currently, we store doc values for the `authors` and `subject` fields. This is visually shown below:
 
-*TODO visual*
+*TODO visual - FROM DALE*
 
 A doc value file exists for each field.
 
-2. **Postings** - a file containing a mapping from a term to a list of the containing documents in order of document id. In addition, the collection frequency of the term is encoded along with the frequency of the term for each document (document frequency). This uses the persistent hashmap described above, where the term represents the key. Keys/terms are inserted and thus held in lexigraphical order. This allows efficient later [merging](#merging). A postings file exists per segment. This file allows boolean queries which do not require positions to be evaluated - i.e. all logic except proximity/phrase queries. Prior to persistence to disk, skips lists are generated for the document ids. These are persisted along with the above information and used to accelerate intersections. A postings entry for a term is shown below as persisted on disk:
+2. **Postings** - a file containing a mapping from a term to a list of the containing documents in order of document id. In addition, the collection frequency of the term is encoded along with the frequency of the term for each document (document frequency). This uses the persistent hashmap described above, where the term represents the key. Keys/terms are inserted and thus held in lexicographical order. This allows efficient later [merging](#merging). A postings file exists per segment. This file allows boolean queries which do not require positions to be evaluated - i.e. all logic except proximity/phrase queries. Prior to persistence to disk, skips lists are generated for the document ids. These are persisted along with the above information and used to accelerate intersections. A postings entry for a term is shown below as persisted on disk:
 
-*TODO visual*
-
+*TODO visual - FROM DALE*
 
 Note that the unstemmed form of the term is stored in the posting value. This information is currently only used for building suggestions - see [Suggestions](#suggestions).
 
@@ -65,47 +64,51 @@ Note that the unstemmed form of the term is stored in the posting value. This in
 
 #### Segments
 
-When indexing a list of documents we are left with a set of terms with postings, positions and doc values after the tokenization and stemming process. Updating an inverted an index is potentially expensive, as term information will need to be read and updated. This process may be viable if the entire index can be held in memory. This, however, is not viable on larger datasets forcing us to persist postings and positions on disk - note the persistent hashmap only keeps our terms in memory as keys. Reading, updating and rewriting information back to disk becomes prohibitively expensive. To address this issue we ensure new terms and their postings are written immutably and merged with existing data later. This introduces the concept of segments.
+When indexing a list of documents we are left with a set of terms with postings, positions and doc values after the tokenization and stemming process. Updating an inverted index is potentially expensive, as term information will need to be read and updated. This process may be viable if the entire index can be held in memory. This, however, is not viable on larger datasets forcing us to persist postings and positions on disk - note the persistent hashmap only keeps our terms in memory as keys. Reading, updating and rewriting information back to disk becomes prohibitively expensive. To address this issue we ensure new terms and their postings are written immutably and merged with the existing data later. This introduces the concept of segments.
 
-A segment represents an isolated inverted for the documents, and thus contains its own postings, doc values and positions. Initially this information is stored entirely in memory - this uses in-memory representations of the structures described above. When the number of documents exceeds a configurable limit (10000 by default), or an explicit "flush" operation is initiated, the structures are written to disk creating new doc value, posting and position files based on the segment id (a unique guid). This in turn causes the creation of a new segment, to which new documents will be added. As indexing is single threaded only a single "in memory" segment can exist at any one time. The flushing of segment involves the sorting of the terms to ensure they are lexograhical order and the use of the persistent hash map for the structures described earlier. Additionally, skip lists are generated at this stage prior to disk persistence. By limiting the buffer size to 10k documents, we limit the amount of memory usage. Note that in memory segment can be searched like any other segment.
+A segment represents an isolated inverted for the documents, and thus contains its own postings, doc values and positions. Initially, this information is stored entirely in memory - this uses in-memory representations of the structures described above. When the number of documents exceeds a configurable limit (10000 by default), or an explicit "flush" operation is initiated, the structures are written to disk creating new doc value, posting and position files based on the segment id (a unique GUID). This in turn causes the creation of a new segment, to which new documents will be added. As indexing is single-threaded only a single "in memory" segment can exist at any one time. The flushing of a segment involves the sorting of the terms to ensure they are lexicographical order and the use of the persistent hash map for the structures described earlier. Additionally, skip lists are generated at this stage prior to disk persistence. By limiting the buffer size to 10k documents, we limit the amount of memory usage. Note that the in-memory segment can be searched like any other segment.
 
-Our index maintains a file pointer to each of the current segments. This index is extremely lightweight, rarely exceeding several MB, and is persisted on disk using pickle. A restart of the server loads this file, restoring the segment pointers and thus allowing searches. Prior to any server shutdown, any in memory segments are flushed. The current segment list is held in order of its creation. This is an important optimization as it ensures any searches executed across the segments will result in the documents being in order of document id (postings are stored in order of document id within each segment). This permits fast intersections and unions on the results.
+Our index maintains a file pointer to each of the current segments. This index is extremely lightweight, rarely exceeding several MB, and is persisted on disk using pickle. A restart of the server loads this file, restoring the segment pointers and thus allowing searches. Prior to any server shutdown, any in-memory segments are flushed. The current segment list is held in order of its creation. This is an important optimization as it ensures any searches executed across the segments will result in the documents being in the order of document id (postings are stored in order of document id within each segment). This permits fast intersections and unions on the results.
 
-At query time, the query is executed across all of the segments. Each of these segments have their own postings, positions and doc value files. Results are collected from each of the segments (in docuemnt id order) and combined before sorting is applied. Any facets are computed from the final list - again requiring a read from each segment for each of the fields on which a facet is requested. This process is viable for smaller segment counts. However, for larger numbers of segments this requires many file reads e.g. at minimum with no faceting `number of terms * number of segments`. This slows downs queries considerably. To reduce the number of segments, and in turn the number of file reads, and accelerate queries we introduce a merge process.
+At query time, the query is executed across all of the segments. Each of these segments has their own postings, positions and doc value files: they are in effect their own isolated index. Results are collected from each of the segments (in document id order) and combined before sorting is applied. Any facets are computed from the final list - again requiring a read from each segment for each of the fields on which a facet is requested. This process is viable for smaller segment counts. However, for larger numbers of segments, this requires many file accesses and reads e.g. at minimum with no faceting, `number of terms * number of segments`. This slows downs queries considerably. To reduce the number of segments, and in turn, the number of file reads, and accelerate queries we introduce a merge process.
 
 This process is visualized below.
 
 
 *TODO visual - include segment lst*
 
-
 #### Merging
 
-Merging addresses the challenge of an ever increasing number of segments and its potential to negatively impact query performance. When a merge is initiated, the two smallest adjacent segments (by document count) are merged together. The resulting merged segment replaces their reference in the index. This requires a short lightweeight lock, during which queries cannot executed, as the segment list is updated in the index. The original segments are in turn updated on disk. This process is shown below:
+Merging addresses the challenge of an ever-increasing number of segments and its potential to negatively impact query performance. When a merge is initiated, the two smallest adjacent segments (by document count) are merged together. The resulting merged segment replaces their reference in the index. This requires a short lightweight lock, during which queries cannot execute, as the segment list is updated in the index. The original segments are in turn updated on disk. This process is shown below:
 
 
-*TODO visual - include segment lst*
+*TODO visual - include segment lst - FROM DALE*
 
 Merging can continually be called (via its [API endppoint](#api)) until there is a single segment - the most optimal index. We call this process "optimizing".
 
 Several earlier design choices optimize merge speed. Specifically:
 
-1. Terms are inserted into the postings and position files in lexograhical order. This allows postings and position files to be merged with a linear merge - worst case `0(m+n)`.
+1. Terms are inserted into the postings and position files in lexicographical order. This allows postings and position files to be merged with a linear merge - worst case `0(m+n)`.
 2. Postings and stored in document id order. This allows postings for a term to be simply concatenated.
-3. Document ids are held in order of doc id in doc value files. This allows doc value fields to be concatenated. The merged result will be a doc value file in irder of document id.
+3. Document ids are held in order of doc id in doc value files. This allows doc value fields to be concatenated. The merged result will be a doc value file in order of document id.
 
 This process represents a simple Logarithmic merging<sup>[8]</sup> technique. Only one merge can occur at any one time.
 
-### Boolean Search Functions & Query Evaluation
-
+### Search Functions & Query Evaluation
 
 Queries are parsed using a [Parsing Expression Grammar(PEG)](https://en.wikipedia.org/wiki/Parsing_expression_grammar) that allows for both boolean and free-text queries. This grammar is implemented using the library [pyparsing](https://github.com/pyparsing/pyparsing). This avoids the need to write error-prone query parsing code whilst providing a formal definition of the grammar and allowing arbitrarily complex boolean expressions. The parsed query tree is evaluated recursively depth-first, with the base case of the recursive leaf’s requiring term lookups against the index. The following search expressions are currently supported by the grammar and parser. Each expression type is a node type in the parsed grammar tree. All operators return a list of `ScoredPosting`, each representing a scored document (score of 0 if scoring is disabled.
+
+### **Natural Language Queries** - 
+
+A natural language is defined as a query with no boolean, proximity or phrase operators. They must be absent from the entire query. The query must also be greater than 1 term (this is a term query). 
+
+The query text is first processed by the BERT model, converting it to a vector. This is used to request 10,000 hits from HNSW. This list is subsequently filtered to docs with a conine distance from the query, greater than a user-specified value (default 0.2). We use an `ef` of 50, finding this gave a reasonable compromise between performance accuracy. Results are returned in order of least distance. This distance is subtracted from 1 to give a final doc score.
 
 #### **Term**
 
 This represents either a single term query or a leaf node in a more complex tree. Terms are looked up against the instance of the `Index` class via `get_term`. This returns the associated term information as an instance of `TermPostings`. This class exposes an iterator over the postings, each representing the term/doc information using the `Postings` class - including the positions. As `Postings` are iterated the associated documents are scored using TF-IDF, producing a `ScoredPosting` (effectively wrapping a `Postings` instance). A list of `ScoredPosting` is returned for use by higher-level operators, e.g. AND. Note that we allow scoring to be disabled. In this case, the score is 0. 
 
-When accessing term information either postings or positions file is accessed. This depends on the higher level operator e.g. `AND`, `Phrase` etc. **Queries which do not require positions use the postings file only to reduce the amount of data to read and decode.**
+When accessing term information either postings or positions file is accessed. This depends on the higher-level operator e.g. `AND`, `Phrase` etc. **Queries that do not require positions use the postings file only to reduce the amount of data to read and decode.**
 
 #### **AND**
 
@@ -121,7 +124,7 @@ The NOT operator receives one node from the tree, e.g. NOT A. It first requests 
 
 #### **Parenthesis**
 
-Parenthesis are supported around boolean queries to explictly state execution order e.g. `(nuclear AND physics) OR (astronomy AND fusion)`. Each query within a parenthesis will form a subtree for execution before being merged using the combining operator.
+Parenthesis are supported around boolean queries to explicitly state execution order e.g. `(nuclear AND physics) OR (astronomy AND fusion)`. Each query within a parenthesis will form a subtree for execution before being merged using the combining operator.
 
 #### **Phrase**
 
@@ -139,9 +142,13 @@ Proximity matching such as `#10(income, taxes)` use exactly the same logic as ph
 2. The order of the terms does not matter, i.e. it is not directional.
 3. Skip lists for positions not currently exploited.
 
+#### **Mixed**
+
+If a query has no boolean, proximity or phrase operator it is processed using vector scoring via HNSW. However, if only a component of the query is free of these operators, but the wider query is not a natural language, then an OR is used for those terms with no operator. For example, for `nuclear physics AND thermodynamics` this will be interpreted as `nuclear OR physics AND thermodynamics`.
+
 ### Boolean Scoring
 
-Scoring can be enabled and disabled as required.
+Scoring is enabled by default but can be disabled at query time. Disabling scoring causes documents to be returned by document id in ascending order.
 
 Operators are scored as follows:
 
@@ -149,46 +156,57 @@ Operators are scored as follows:
 2. AND - Sum - a new `ScoredPosting` is created (using the left positions) with the sum of two `ScoredPosting` instances which satisfy the intersection as the score.
 3. OR - the score of the `ScoredPosting`. If the doc exists in both lists, a sum is performed similarly to AND.
 4. NOT - Constant score of 1 to all docs.
-5. Free text - Scored using vector scoring and HNSW if there is no boolean expression in the wider query. If a component of a query has no boolean operator, but one exists in the wider query, and OR is used for those terms with no operator. For example, for `nuclear physics AND thermodynamics` this will be interpreted as `nuclear OR physics AND thermodynamics`.
-6. Proximity/Phrase - Currently scored the same as an AND.
+5. Proximity/Phrase - Currently scored the same as an AND.
+6. Natural Language - scored with Cosine similarity vs HNSW.
 
 ### Faceting & Filtering
 
 Doc values are used to provide faceting functioning as shown below. These facets can also be clicked, applying a filter to the result set on the value 
 
-*insert image*
+*insert image - FROM DALE*
 
-Doc values provide a mapping from a document id to a fields value. This is limited to specific fields - currently `authors` and `subjects` but configurable. Once the complete set of results is collated for a query, the values for the requested facet fields (see [API](#api)) are read from the current segments. The count of each unique value is then returned. To accelerate this process, values are held in an in memory cache per field in each segment. When a documents field value is read, this is pushed into the cache. Subsequent requests for the same document id and field from future queries will utilize this cache prior to requesting a disk read. This cache is only cleared when a segment is merged.
+Doc values provide a mapping from a document id to the value of a field. This is limited to specific fields - currently `authors` and `subjects` but easily configurable. Once the complete set of results is collated for a query, the values for the requested facet fields (see [API](#api)) are read from the current segments. The count of each unique value is then returned. To accelerate this process, values are held in an in-memory cache per field in each segment. When a document's field value is read, this is pushed into the cache. Subsequent requests for the same document id and field from future queries will utilize this cache prior to requesting a disk read. This cache is only cleared when a segment is merged.
 
-To allow filtering on facets, the field values must also be indexed. To ensure the value is associated with the field, these values are prefixed with the field name. For example, for the field `subject` with the value `Materials Science` will be indexed as:
+To allow filtering on facets, the field values must also be indexed. To ensure the value is associated with the field, these values are prefixed with the field name. For example, the field `subject` with the value `Materials Science` will be indexed as:
 
 - `Materi`
 - `Scienc`
 - `subject:Materials_Science`
 
-When a filter is specified for a query, this is appended to the query text with an `AND` clause and final term. For example, the query `graphite` with a filer for `Materials_Science` on the `subject` field causes the final query `graphite AND subject:Materials_Science` to be executed.
+When a filter is specified for a query, this is appended to the query text with an `AND` clause and final term. For example, the query `graphite` with a filter for `Materials_Science` on the `subject` field causes the final query `graphite AND subject:Materials_Science` to be executed.
+
+Filtering for natural language queries requires 2 phrase execution. The query text is first converted to a vector and executed against HNSW. The filters are in turn converted to a simple `AND` query - similar to the format described above, but with no query text. This query is in turn executed against the inverted index. The results of these two queries are finally intersected to give the filtered list.
+
+Note: faceting always occurs after filtering - thus ensuring counts are reflected of the filtered results.
 
 ### Suggestions
 
-
-**TODO**
-
-
-
+**TODO - Lorenzo**
 
 ### Other Search functions
 
 The following additional functionality is supported:
 
-1. Result pagination through `offset` and `max_results` parameters in the search request body.
-2. Ability to limit the return of specific fields via a `fields` parameter in the search request body. This reduces network transfer to the UI and improves rendering time.
+1. Ability to pagination through results via `offset` and `max_results` parameters in the search request body.
+
+### Document Results
+
+Once all results have been finalized and faceting completed, the internal document ids are used to look up the JSON body for the top N documents requested from the embedded LMDB database. The fields returned for the top N hits, can be limited to a specific set of fields via a `fields` parameter in the search request body. This reduces network transfer to the UI and improves rendering time.
+
+The top N results are returned to the UI in JSON, along with facets and the total hits.
 
 ## Thread safety
 
-We support concurrent querying but only single threaded indexing. A number of read-write locks are used to achieve this. Our read-write lock allows concurrent reads but only single threaded writes. Writes must wait for all reads to complete before executing and reads are blocked whilst a write occurs. Note, the use of these locks. They do not prevent concurrent querying and indexing - only protecting key state changes. Specifically:
+We support concurrent querying but only single-threaded indexing. A number of read-write locks are used to achieve this. Our read-write lock allows concurrent reads but only single-threaded writes. Writes must wait for all reads to complete before executing and reads are blocked whilst a write occurs. Note, the use of these locks. They do not prevent concurrent querying and indexing - only protecting key state changes. Specifically:
 
-- 
+- `write_lock` - Ensures all operations which modify the index state (e.g. pointers to segments) such as indexing, saving on exit and loading on start are single=threaded. Attempts to perform concurrent state-changing operations are blocked. Does not block reads.
+- `merge_lock` - Ensures merging is single-threaded. No impact on queries. 
+- `segment_update_lock` - 
 
+Per segment we maintain:
+
+- `indexing_lock` - Ensures indexing remains single-threaded per segment. Blocks indexing during flushing as terms in the buffer are iterated over and written to disk. Does not block queries ever.
+- `flush_lock` - Used momentarily once flushing is complete to switch queries to the disk structure instead of buffers that are cleared and not re-used.
 
 ## API
 
@@ -219,10 +237,10 @@ curl --location --request POST 'http://127.0.0.1:5000/search' \
 
 Other API endpoints include:
 
-- `/flush` - flushes the current in memory segment to disk.
-- `/optimize` - initiates a merge between the two smallest adjacent segments. Blocks if a merging is occuring. Reports the previous and new segment count. Can be repeadily called until the number of segments is 1 for an optimal index. Should be executed when indexing is complete.
-- `/index` - Indexes a single document via a `POST`. The document should be sent in the request body in JSON format. A special field `vector` can be added to send the vector for HNSW.
-- `/bulk_index` - Indexes a batch of documents via a `POST`. Documents should be sent in ndjson format in the body. A special field `vector` can be added to send the vector for HNSW.
+- `/flush` - flushes the current in-memory segment to disk.
+- `/optimize` - initiates a merge between the two smallest adjacent segments. Blocks if a merging is occurring. Reports the previous and new segment count. Can be repeatedly called until the number of segments is 1 for an optimal index. Should be executed when indexing is complete.
+- `/index` - Indexes a single document via a `POST`. The document should be sent in the request body in JSON format. A special field `vector` should be present for the vector for HNSW.
+- `/bulk_index` - Indexes a batch of documents via a `POST`. Documents should be sent in ndjson format in the body. A special field `vector` should be present for the vector for HNSW.
 - `/suggest` - Provides suggestions based on query text.
 - `/build_suggest` - Builds the suggestion trie using the current segments - see [Suggestions](#suggestions).
 
@@ -230,15 +248,15 @@ Further details can be found [here](https://github.com/saadsharif/ttds-group/blo
 
 ## Performance Optimizations
 
-In optimize query performance the following optimizations proved critical:
+In order to optimize query performance the following optimizations proved critical:
 
-- Use of the [ujson](https://pypi.org/project/ujson/) library for decoding and encoding documents. Other libraries such as SimdJSON but these provided minimal gain.
+- Use of the [ujson](https://pypi.org/project/ujson/) library for decoding and encoding documents. Other libraries such as SimdJSON but provided minimal gain.
 - Use of skip lists to improve intersections and proximity matches.
 - Doc value caches for faceting
-- Seperation of postings and positions into seperate files. This specifically helps non proximity queries by reducing the volume of data for read and decoding.
+- Separation of postings and positions into separate files. This specifically helps non-proximity queries by reducing the volume of data for reading and decoding.
 - Moving to a minimal representation on disk. JSON representations proved a bottleneck on decoding at query time. **This requires further improvement**.
-- Ensuring terms were stored in lexographical order and ensuring segment order was maintained. This ensures queries across segments do not need to resort documents for intersections and unions, since they are inherently in order.
-- Positions and postings were originally delta encoded. This provided no performance benefit. Although data size reduced on disk, this did not offset the cost of reversing the encoding at query time.
+- Ensuring terms were stored in lexicographical order and ensuring segment order was maintained. This ensures queries across segments do not need to resort documents for intersections and unions, since they are inherently in order.
+- Positions and postings were originally delta encoded. This provided no performance benefit. Although data size was reduced on disk, this did not offset the cost of reversing the encoding at query time.
 
 ### Possible Improvements
 
@@ -255,6 +273,7 @@ In optimize query performance the following optimizations proved critical:
 11. Score phrases and proximity matches higher than AND. Currently, these use the same scoring technique. Phrase matches should be boosted (when an AND is being performed by the user), and proximity matches should boost documents where the terms exist closer and within the limit N.
 12. Consider support lemmatisation as an improvement to stemming so that word context is considered. This may improve precision at the expense of recall.
 13. Merging should occur in a background thread - ideally throttled at a specific read/write rate so as to not impact searches.
+14. Use a language other than Python.
 
 ### References
 
@@ -283,3 +302,4 @@ In optimize query performance the following optimizations proved critical:
 [12] Lemmatisation - https://en.wikipedia.org/wiki/Lemmatisation
 
 [13] Stop Words - http://members.unine.ch/jacques.savoy/clef/englishST.txt
+
