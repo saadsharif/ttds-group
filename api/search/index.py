@@ -52,7 +52,7 @@ class Index:
         # used to ensure single threaded indexing
         self._write_lock = ReadWriteLock()
         # bert model for vectors
-        self._vector_model = BERTModule(vmodel=3)
+        self._vector_model = BERTModule(vmodel=4)
         # facet fields
         self._doc_value_fields = doc_value_fields
         # merge lock - only one merge at once
