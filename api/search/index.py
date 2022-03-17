@@ -21,7 +21,7 @@ from search.store import DocumentStore
 from search.suggestions import Suggester
 from math import log10
 
-VECTOR_DIMENSIONS = 768
+VECTOR_DIMENSIONS = 384
 MAX_VECTOR_DOCUMENTS = 500000
 MAX_VECTOR_RESULTS = 10000
 CORES = os.cpu_count()
@@ -178,7 +178,8 @@ class Index:
             self._segment_update_lock.release_write()
         return self._segments[-1]
 
-    def process_document(self, document):
+    # NOT THREAD SAFE!
+    def _process_document(self, document):
         self._id_mappings[self._current_doc_id] = document.id
         terms_and_tokens = self.analyzer.process_document(document, keepOriginal=True)
         # this allows exact matching on doc value fields TODO: really we should have a different index for this
@@ -204,12 +205,14 @@ class Index:
             self._write_lock.release_write()
             raise IndexException(f'{document.id} already exists in index {self._index_id}')
         try:
-            self.process_document(document, flushTrie=True)
+            self._process_document(document, flushTrie=True)
             # persist to the db
             self._doc_store[str(self._current_doc_id)] = document.fields
             # add vector to hnsw
             self._docs_added = True
             if len(document.vector) > 0:
+                if len(document.vector) != VECTOR_DIMENSIONS:
+                    raise IndexException(f"vector length is {len(document.vector)} must be f{VECTOR_DIMENSIONS}")
                 self._hnsw_model.add_items([document.vector], [self._current_doc_id])
             doc_id = self._current_doc_id
             self._current_doc_id += 1
@@ -243,12 +246,15 @@ class Index:
                 n = len(docs_to_index)
                 print(f"Indexing {n} documents...", end="")
                 for idx, document in enumerate(docs_to_index):
-                    self.process_document(document)
-                    doc_ids.append((document.id, self._current_doc_id))
-                    doc_batch[str(self._current_doc_id)] = document.fields
                     if len(document.vector) > 0:
+                        if len(document.vector) != VECTOR_DIMENSIONS:
+                            failures.append(f"vector length is {len(document.vector)} must be f{VECTOR_DIMENSIONS}")
+                            continue
                         vector_batch.append(document.vector)
                         v_doc_ids.append(self._current_doc_id)
+                    self._process_document(document)
+                    doc_ids.append((document.id, self._current_doc_id))
+                    doc_batch[str(self._current_doc_id)] = document.fields
                     self._current_doc_id += 1
                 print("OK")  # done with the progress
                 # persists the batch to the db
