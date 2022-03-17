@@ -10,12 +10,14 @@ from marshmallow import ValidationError
 
 from models.document import DocumentSchema
 from models.error import APIError, APIErrorSchema
-from models.results import Results, ResultsSchema, Suggestions, SuggestionResultsSchema
+from models.results import Results, ResultsSchema, Suggestions, SuggestionResultsSchema, Expansions, \
+    ExpansionsResultsSchema
 from models.search import SearchSchema, SuggestionSearchSchema
 
 # single global of our index
 from search.analyzer import Analyzer
-from search.exception import IndexException, StoreException, MergeException, SearchException, TrieException
+from search.exception import IndexException, StoreException, MergeException, SearchException, TrieException, \
+    ExpansionsException
 from search.index import Index
 from search.utils import load_stop_words
 from cheroot.wsgi import Server as WSGIServer
@@ -54,6 +56,22 @@ def site():
     return render_template("index.html")
 
 
+@app.route('/expand', methods=['POST'])
+def expand():
+    try:
+        expansions = index.expand(SuggestionSearchSchema().load(request.get_json()))
+        print(expansions)
+        return jsonify(ExpansionsResultsSchema().dump(Expansions(expansions))), 200
+        # TODO: Pass the request to API and marshall the responses
+    except ValidationError as e:
+        return jsonify(APIErrorSchema().dump(APIError('unable to parse expansion request', e.messages))), 400
+    except Exception as ue:
+        print(traceback.format_exc())
+        return jsonify(
+            APIErrorSchema().dump(
+                APIError('unable to execute expansion - unexpected exception', {"exception": str(ue)}))), 400
+
+
 @app.route('/suggest', methods=['POST'])
 def suggest():
     try:
@@ -62,7 +80,7 @@ def suggest():
         return jsonify(SuggestionResultsSchema().dump(results)), 200
         # TODO: Pass the request to API and marshall the responses
     except ValidationError as e:
-        return jsonify(APIErrorSchema().dump(APIError('unable to parse search request', e.messages))), 400
+        return jsonify(APIErrorSchema().dump(APIError('unable to parse suggest request', e.messages))), 400
     except Exception as ue:
         print(traceback.format_exc())
         return jsonify(
@@ -210,6 +228,21 @@ def build_trie():
         return jsonify(
             APIErrorSchema().dump(
                 APIError('unable to execute build_suggest - unexpected exception', {"exception": str(ue)}))), 400
+
+
+@app.route('/build_expansions', methods=['POST', 'GET'])
+def build_expansions():
+    try:
+        index.update_expansions()
+        return jsonify({'ok': True}), 200
+    except ExpansionsException as te:
+        print(traceback.format_exc())
+        return jsonify(APIErrorSchema().dump(APIError('unable to update expansions', {'exception': te.message}))), 400
+    except Exception as ue:
+        print(traceback.format_exc())
+        return jsonify(
+            APIErrorSchema().dump(
+                APIError('unable to execute build_expansions - unexpected exception', {"exception": str(ue)}))), 400
 
 
 def on_exit_api():

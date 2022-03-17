@@ -4,6 +4,7 @@ from string import ascii_lowercase
 from datrie import Trie
 from search.posting import TermPosting
 from search.segment import Segment
+from search.utils import valid_term
 from utils.utils import print_progress
 from models.search import SuggestionSearchSchema
 from typing import List, Dict, Tuple
@@ -21,16 +22,11 @@ class Suggester:
         i = 0
         n = segment.num_terms
         for k, v in segment.terms():
-            if self._valid_term(k):
-                self._add_term_to_trie(k, v.collection_frequency, occurrence=v.first_occurrence, reset_count=reset_count)
+            if valid_term(k):
+                self._add_term_to_trie(k, v.collection_frequency, occurrence=v.first_occurrence,
+                                       reset_count=reset_count)
             i += 1
             print_progress(i, n, label=f"Updating trie with segment {segment.segment_id}")
-
-    @staticmethod
-    def _valid_term(term):
-        if ":" in term:
-            return False
-        return term.isalpha()
 
     def suggest(self, search: SuggestionSearchSchema) -> List[str]:
         words = self._tokenizer.split(search.query.lower())

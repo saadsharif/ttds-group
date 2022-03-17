@@ -25,14 +25,26 @@ class ResultsSchema(Schema):
     time_elapsed = fields.Float()
     request_id = fields.Str()
 
+
+class Expansions:
+    def __init__(self, expansions):
+        self.expansions = expansions
+
+
+class ExpansionsResultsSchema(Schema):
+    expansions = fields.Raw()
+
+
 class Suggestions:
     def __init__(self, hits):
         self.hits = hits
         self.request_id = str(uuid.uuid1())
 
+
 class SuggestionResultSchema(Schema):
     suggestion = fields.Str()
     highlight = fields.Str()
+
 
 class SuggestionResultsSchema(Schema):
     hits = fields.Raw()

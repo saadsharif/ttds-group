@@ -1,3 +1,4 @@
+import itertools
 import os
 import pickle
 import sys
@@ -8,7 +9,9 @@ import hnswlib
 from bidict import bidict
 from search.analyzer import Analyzer
 from search.bert import BERTModule
-from search.exception import IndexException, SearchException, MergeException, TrieException, StoreException
+from search.exception import IndexException, SearchException, MergeException, TrieException, StoreException, \
+    ExpansionsException
+from search.expander import TermExpander
 from search.lock import ReadWriteLock
 from search.models import Result
 from search.posting import TermPosting
@@ -16,6 +19,7 @@ from search.query import Query
 from search.segment import Segment, _create_segment_id
 from search.store import DocumentStore
 from search.suggestions import Suggester
+from math import log10
 
 VECTOR_DIMENSIONS = 768
 MAX_VECTOR_DOCUMENTS = 500000
@@ -30,6 +34,7 @@ class Index:
         self._storage_path = storage_path
         self.analyzer = analyzer
         self._suggester = Suggester()
+        self._expander = TermExpander(self.analyzer)
         # auto generate an index id if not provided
         self._index_id = index_id
         # we currently just keep a list of segments and assume terms are in all segments - large segments (1000+docs)
@@ -76,6 +81,7 @@ class Index:
             del state['_merge_lock']
             del state['_segment_update_lock']
             del state['_suggester']
+            del state['_expander']
             del state['_hnsw_model']
             # del state['_vector_model']
             pickle.dump(state, index_file)
@@ -270,6 +276,25 @@ class Index:
             else MAX_VECTOR_RESULTS
         return self._hnsw_model.knn_query(query_vector, k=max_vectors, num_threads=CORES)
 
+    def update_expansions(self):
+        # so we consider the latest segment in suggestions as we don't read the buffer
+        self.save()
+        try:
+            self._segment_update_lock.acquire_read()
+            for segment in self._segments:
+                segment.flush()
+                self._expander.add_segment(segment)
+            self._segment_update_lock.release_read()
+        except Exception as e:
+            self._segment_update_lock.release_read()
+            raise ExpansionsException(f"Unexpected exception during expansion update - {e}")
+
+    def expand(self, query):
+        try:
+            return self._expander.expand_query(query.query, num_expansions=query.max_results)
+        except Exception as e:
+            raise SearchException(f"Unexpected exception during expansion - {e}")
+
     def update_suggester(self):
         # so we consider the latest segment in suggestions as we don't read the buffer
         self.save()
@@ -281,13 +306,13 @@ class Index:
                 reset_count = i == 0
                 self._suggester.add_segment(segment, reset_count=reset_count)
                 i += 1
+            self._segment_update_lock.release_read()
         except Exception as e:
             self._segment_update_lock.release_read()
             raise TrieException(f"Unexpected exception during trie update - {e}")
 
     def suggest(self, search):
         try:
-            self._segment_update_lock.acquire_read()
             rets = []
             if search:
                 matches = self._suggester.suggest(search)
@@ -297,16 +322,15 @@ class Index:
                     rets.append({
                         'suggestion': term.strip(),
                         'highlight': f"{common}<b>{highlight}</b>"})
-            self._segment_update_lock.release_read()
             return rets
         except Exception as e:
-            self._segment_update_lock.release_read()
             raise SearchException(f"Unexpected exception during querying - {e}")
 
     def search(self, query):
         # filters are currently appended as an AND phrase - this isn't ideal but these doc value fields are also indexed
         try:
-            docs, facets, total = Query(self).execute(query.query, query.filters, query.score, query.max_results, query.offset,
+            docs, facets, total = Query(self).execute(query.query, query.filters, query.score, query.max_results,
+                                                      query.offset,
                                                       query.facets, use_hnsw=query.use_hnsw,
                                                       max_distance=query.max_distance)
 
@@ -346,6 +370,22 @@ class Index:
                     break
         self._segment_update_lock.release_read()
         return values
+
+    def get_top_terms(self, doc_ids, count, filter_numeric=True, filter_terms=[]):
+        terms = []
+        for doc_id in doc_ids:
+            terms = terms + self.get_terms(doc_id)
+        freq = {}
+        for term in terms:
+            if (filter_numeric and term.isnumeric()) or term in filter_terms:
+                continue
+            freq[term] = freq[term] + 1 if term in freq else 1
+        scores = {}
+        for term, term_freq in freq.items():
+            doc_freq = self._index[term].doc_frequency
+            scores[term] = term_freq * log10(self.number_of_docs / doc_freq)
+        sorted_terms = {k: v for k, v in sorted(scores.items(), key=lambda item: item[1], reverse=True)}
+        return dict(itertools.islice(sorted_terms.items(), count))
 
     # merges two segments (together and flushed) to produce a larger segment - with the aim of speeding up searches
     def optimize(self):

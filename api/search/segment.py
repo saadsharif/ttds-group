@@ -8,7 +8,7 @@ from search.posting import TermPosting
 from search.store import Store
 
 # new segment rolled over on hitting this
-DEFAULT_MAX_DOCS_PER_SEGMENT = 10000
+DEFAULT_MAX_DOCS_PER_SEGMENT = 2000
 
 
 def _create_segment_id():
@@ -294,7 +294,7 @@ class Segment:
                 self._positions_index[right_term] = right_posting.to_store_format()
                 right_term, right_posting = next(r_iter, (None, None))
             else:
-                left_posting.add_term_info(right_posting)
+                left_posting.add_term_info(right_posting, update_skips=True)
                 self._positions_index[left_term] = left_posting.to_store_format()
                 left_term, left_posting = next(l_iter, (None, None))
                 right_term, right_posting = next(r_iter, (None, None))
@@ -323,7 +323,7 @@ class Segment:
                 self._postings_index[right_term] = right_posting.to_store_format(with_positions=False)
                 right_term, right_posting = next(r_iter, (None, None))
             else:
-                left_posting.add_term_info(right_posting)
+                left_posting.add_term_info(right_posting, update_skips=True)
                 self._postings_index[left_term] = left_posting.to_store_format(with_positions=False)
                 left_term, left_posting = next(l_iter, (None, None))
                 right_term, right_posting = next(r_iter, (None, None))
