@@ -98,7 +98,7 @@ This process represents a simple Logarithmic merging<sup>[8]</sup> technique. On
 
 Queries are parsed using a [Parsing Expression Grammar(PEG)](https://en.wikipedia.org/wiki/Parsing_expression_grammar) that allows for both boolean and free-text queries. This grammar is implemented using the library [pyparsing](https://github.com/pyparsing/pyparsing). This avoids the need to write error-prone query parsing code whilst providing a formal definition of the grammar and allowing arbitrarily complex boolean expressions. The parsed query tree is evaluated recursively depth-first, with the base case of the recursive leaf’s requiring term lookups against the index. The following search expressions are currently supported by the grammar and parser. Each expression type is a node type in the parsed grammar tree. All operators return a list of `ScoredPosting`, each representing a scored document (score of 0 if scoring is disabled.
 
-### **Natural Language Queries** - 
+#### **Natural Language Queries** - 
 
 A natural language is defined as a query with no boolean, proximity or phrase operators. They must be absent from the entire query. The query must also be greater than 1 term (this is a term query). 
 
