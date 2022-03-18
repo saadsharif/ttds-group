@@ -343,7 +343,7 @@ class Query:
             return False
         return True
 
-    def execute(self, query, filters, score, max_results, offset, facets, use_hnsw=True, max_distance=0.2):
+    def execute(self, query, filters, score, max_results, offset, facets, use_hnsw=True, max_distance=0.8):
         filters = [f"{filter.field}:{'_'.join(self._index.analyzer.tokenize(filter.value))}" for filter in filters]
         filter_query = " AND ".join(filters)
         if use_hnsw and self._is_natural_language(query):
