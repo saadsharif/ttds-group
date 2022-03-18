@@ -32,9 +32,13 @@ class VectorPosting:
 
 @total_ordering
 class ScoredPosting:
-    def __init__(self, posting, score=0):
+    def __init__(self, posting, score=0, positions=None):
         self.posting = posting
         self.score = score
+        if positions is None:
+            self.positions = posting.positions
+        else:
+            self.positions = positions
 
     @property
     def doc_id(self):
@@ -46,10 +50,6 @@ class ScoredPosting:
     @property
     def is_stop_word(self):
         return False
-
-    @property
-    def positions(self):
-        return self.posting.positions
 
     @property
     def skips(self):

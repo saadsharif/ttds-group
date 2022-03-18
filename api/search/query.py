@@ -94,17 +94,17 @@ class Query:
             'natural': self._evaluate_natural
         }
 
-    def _evaluate_and(self, components, condition, score=False):
+    def _evaluate_and(self, components, pcondition, score=False):
         self._with_posting_skips = True
-        left_term_posting = self.evaluate(components[0], condition=condition, score=score)
-        right_term_posting = self.evaluate(components[1], condition=condition, score=score)
+        left_term_posting = self.evaluate(components[0], pcondition=pcondition, score=score)
+        right_term_posting = self.evaluate(components[1], pcondition=pcondition, score=score)
         if left_term_posting.is_stop_word or right_term_posting.is_stop_word:
             return self._execute_or(left_term_posting, right_term_posting)
-        intersection = self._execute_and(left_term_posting, right_term_posting, condition, score=score)
+        intersection = self._execute_and(left_term_posting, right_term_posting, pcondition, score=score)
         self._with_posting_skips = False
         return intersection
 
-    def _execute_and(self, left_term_posting, right_term_posting, condition, score=False):
+    def _execute_and(self, left_term_posting, right_term_posting, pcondition, score=False):
         intersection = []
         li = 0
         ri = 0
@@ -136,9 +136,10 @@ class Query:
                         continue
                 li += 1
             else:
-                if condition(left_posting, right_posting):
+                positions = pcondition(left_posting, right_posting)
+                if positions is None or len(positions) > 0:
                     if score:
-                        intersection.append(ScoredPosting(left_posting, left_posting.score + right_posting.score))
+                        intersection.append(ScoredPosting(left_posting, left_posting.score + right_posting.score, positions=positions))
                     else:
                         intersection.append(left_posting)
                 li += 1
@@ -147,12 +148,12 @@ class Query:
         term_posting.postings = intersection
         return term_posting
 
-    def _evaluate_natural(self, components, condition, score=True):
+    def _evaluate_natural(self, components, pcondition, score=True):
         # TODO: Replace this with HNSW vector scoring
-        return self._evaluate_or(components, condition, score=True)
+        return self._evaluate_or(components, pcondition, score=True)
 
-    def evaluate(self, components, condition=lambda left, right, args={}: True, score=False):
-        return self._methods[components.getName()](components, condition, score)
+    def evaluate(self, components, pcondition=lambda left, right, args={}: None, score=False):
+        return self._methods[components.getName()](components, pcondition, score)
 
     def _extend(self, list, iter):
         item = next(iter, None)
@@ -185,12 +186,12 @@ class Query:
             self._posting_merge(left_term_posting.postings, right_term_posting.postings))
         return merged_term_posting
 
-    def _evaluate_or(self, components, condition, score=False):
+    def _evaluate_or(self, components, pcondition, score=False):
         left_term_posting = self.evaluate(components[0], score=score)
         right_term_posting = self.evaluate(components[1], score=score)
         return self._execute_or(left_term_posting, right_term_posting)
 
-    def _evaluate_not(self, components, condition, score):
+    def _evaluate_not(self, components, pcondition, score):
         not_docs = []
         right_term_posting = self.evaluate(components[0], score=score)
         if right_term_posting.is_stop_word:
@@ -210,6 +211,7 @@ class Query:
         return term_posting
 
     def _phrase_match(self, left, right):
+        positions = []
         left_positions = left.positions
         right_positions = right.positions
         li = 0
@@ -234,7 +236,7 @@ class Query:
                 ri += 1
             else:
                 if left + 1 == right:
-                    return True
+                    positions.append(left)
                 if ls < len(left_skips):
                     # we still have a skip to maybe use
                     left_skip = left_skips[ls]
@@ -243,17 +245,17 @@ class Query:
                         li = left_skip[1]
                         continue
                 li += 1
-        return False
+        return positions
 
-    def _evaluate_parenthesis(self, components, condition, score=False):
-        return self.evaluate(components[0], condition, score=score)
+    def _evaluate_parenthesis(self, components, pcondition, score=False):
+        return self.evaluate(components[0], pcondition, score=score)
 
-    def _evaluate_phrases(self, components, condition, score):
+    def _evaluate_phrases(self, components, pcondition, score):
         # first we perform an AND by re-writing the query
         self._with_positions = True
         and_query = self._parser(' AND '.join([component[0] for component in components]))
-        # additional condition through lambda _phrase_match on verification step of and performs the phrase check
-        phrase_response = self.evaluate(and_query[0], condition=self._phrase_match, score=score)
+        # additional pcondition through lambda _phrase_match on verification step of and performs the phrase check
+        phrase_response = self.evaluate(and_query[0], pcondition=self._phrase_match, score=score)
         self._with_positions = False
         return phrase_response
 
@@ -265,7 +267,8 @@ class Query:
         while True:
             dif = abs(left - right)
             if dif <= distance:
-                return True
+                # just return left position, unused - change in future if we wanted nested proximity support
+                return [left]
             if left < right:
                 next_left = next(left_side, None)
                 if next_left is not None:
@@ -276,20 +279,20 @@ class Query:
                 if next_right is not None:
                     right = next_right
                     continue
-            return False
+            return []
 
-    def _evaluate_proximity(self, components, condition, score):
+    def _evaluate_proximity(self, components, pcondition, score):
         self._with_positions = True
         distance = components[0]
         # first we perform an AND by re-writing the query
         and_query = self._parser(' AND '.join([component[0] for component in components[1:]]))
-        # additional condition through lambda _phrase_match on verification step of and performs the phrase check
+        # additional pcondition through lambda _phrase_match on verification step of and performs the phrase check
         check_proximity = lambda left, right: self._proximity_match(left, right, int(distance))
-        proximity_response = self.evaluate(and_query[0], condition=check_proximity, score=score)
+        proximity_response = self.evaluate(and_query[0], pcondition=check_proximity, score=score)
         self._with_positions = False
         return proximity_response
 
-    def _evaluate_term(self, components, condition, score):
+    def _evaluate_term(self, components, pcondition, score):
         # score the docs
         term = components[0]
         if ":" not in term:
@@ -367,7 +370,7 @@ class Query:
                 docs.sort(key=lambda p: p.doc_id)
                 vector_posting.postings = docs
                 # intersect filtered with hnsw
-                docs = self._execute_and(vector_posting, filtered_docs, lambda left, right, args={}: True, score=False).postings
+                docs = self._execute_and(vector_posting, filtered_docs, pcondition=lambda left, right, args={}: None, score=False).postings
         else:
             query = f"{query} AND {filter_query}"
             parsed = self._parser(query)

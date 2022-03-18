@@ -205,7 +205,7 @@ class Index:
             self._write_lock.release_write()
             raise IndexException(f'{document.id} already exists in index {self._index_id}')
         try:
-            self._process_document(document, flushTrie=True)
+            self._process_document(document)
             # persist to the db
             self._doc_store[str(self._current_doc_id)] = document.fields
             # add vector to hnsw
