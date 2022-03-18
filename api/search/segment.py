@@ -294,7 +294,8 @@ class Segment:
                 self._positions_index[right_term] = right_posting.to_store_format()
                 right_term, right_posting = next(r_iter, (None, None))
             else:
-                left_posting.add_term_info(right_posting, update_skips=True)
+                # no need to update skips as they are generated on store
+                left_posting.add_term_info(right_posting)
                 self._positions_index[left_term] = left_posting.to_store_format()
                 left_term, left_posting = next(l_iter, (None, None))
                 right_term, right_posting = next(r_iter, (None, None))
@@ -323,7 +324,8 @@ class Segment:
                 self._postings_index[right_term] = right_posting.to_store_format(with_positions=False)
                 right_term, right_posting = next(r_iter, (None, None))
             else:
-                left_posting.add_term_info(right_posting, update_skips=True)
+                # no need to update skips as they are generated on store
+                left_posting.add_term_info(right_posting)
                 self._postings_index[left_term] = left_posting.to_store_format(with_positions=False)
                 left_term, left_posting = next(l_iter, (None, None))
                 right_term, right_posting = next(r_iter, (None, None))
