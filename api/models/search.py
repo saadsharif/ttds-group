@@ -25,7 +25,7 @@ class FilterSchema(Schema):
 class SearchSchema(Schema):
     query = fields.Str(required=True)
     max_results = fields.Int(default=10, missing=10)
-    max_distance = fields.Float(default=0.2, missing=0.2)
+    max_distance = fields.Float(default=0.8, missing=0.8)
     use_hnsw = fields.Boolean(default=True, missing=True)
     offset = fields.Int(default=0, missing=0, validate=Range(min=0, error="Value must be greater or equal to 0"))
     score = fields.Boolean(default=True, missing=True)
