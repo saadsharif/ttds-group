@@ -84,7 +84,7 @@ Merging addresses the challenge of an ever-increasing number of segments and its
 ![image](https://user-images.githubusercontent.com/12695796/159171094-d27c2829-79fa-4b70-b2bb-1abea5ce8dba.png)
 
 
-Merging can continually be called (via its [API endppoint](#api)) until there is a single segment - the most optimal index. We call this process "optimizing".
+Merging can continually be called (via its [API endpoint](#api)) until there is a single segment - the most optimal index. We call this process "optimizing".
 
 Several earlier design choices optimize merge speed. Specifically:
 
