@@ -58,8 +58,7 @@ A doc value file exists for each field.
 
 Note that the unstemmed form of the term is stored in the posting value. This information is currently only used for building suggestions - see [Suggestions](#suggestions).
 
-3. **Positions** - a file containing a mapping from a term to a list of the containing documents and the respective positions of the term. This is very similar to the postings file described above, except positions of the terms for each document are also stored. A positions file is thus considerably larger than a postings file for the same term. We additionally encode skips lists for the positions of each document. Positions are their respective skip lists are used for proximity queries. A positions entry for a term is shown below as persisted on disk:
-
+3. **Positions** - a file containing a mapping from a term to a list of the containing documents and the respective positions of the term. This is very similar to the postings file described above, except positions of the terms for each document are also encoded. A positions file is thus considerably larger than a postings file for the same term. We additionally encode skips lists for the positions of each document. Positions are their respective skip lists are used for proximity queries.
 
 4. **Suggestion Trie** - a trie structure can be built from the postings on demand to service suggestion queries. See [Suggestions](#suggestions). This is held in memory only.
 
