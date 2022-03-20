@@ -47,7 +47,7 @@ The key is stored on disk as a string with the value persisted as bytes. The Sto
 
 1. **Doc values** - a file containing a mapping from the internal document id to the values for a field. This is for short string fields only e.g. authors and is used for [faceting](#faceting--filtering) as well doc id lookups. Stored in doc id order. This uses the internal store for persistence. A cache is also implemented to accelerate doc id lookups. Exists per [Segment](#segments). Currently, we store doc values for the `authors` and `subject` fields. This is visually shown below:
 
-*TODO visual - FROM DALE*
+![image](https://user-images.githubusercontent.com/12695796/159169770-6f8c8e59-215d-4b12-8ff9-f4d1ea49986e.png)
 
 A doc value file exists for each field.
 
