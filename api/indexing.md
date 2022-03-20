@@ -161,9 +161,7 @@ Operators are scored as follows:
 
 ### Faceting & Filtering
 
-Doc values are used to provide faceting functioning as shown below. These facets can also be clicked, applying a filter to the result set on the value 
-
-*insert image - FROM DALE*
+Doc values are used to provide faceting functioning as shown below. These facets can also be clicked, applying a filter to the result set on the value.
 
 Doc values provide a mapping from a document id to the value of a field. This is limited to specific fields - currently `authors` and `subjects` but easily configurable. Once the complete set of results is collated for a query, the values for the requested facet fields (see [API](#api)) are read from the current segments. The count of each unique value is then returned. To accelerate this process, values are held in an in-memory cache per field in each segment. When a document's field value is read, this is pushed into the cache. Subsequent requests for the same document id and field from future queries will utilize this cache prior to requesting a disk read. This cache is only cleared when a segment is merged.
 
