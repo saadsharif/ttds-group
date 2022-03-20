@@ -51,9 +51,10 @@ The key is stored on disk as a string with the value persisted as bytes. The Sto
 
 A doc value file exists for each field.
 
-2. **Postings** - a file containing a mapping from a term to a list of the containing documents in order of document id. In addition, the collection frequency of the term is encoded along with the frequency of the term for each document (document frequency). This uses the persistent hashmap described above, where the term represents the key. Keys/terms are inserted and thus held in lexicographical order. This allows efficient later [merging](#merging). A postings file exists per segment. This file allows boolean queries which do not require positions to be evaluated - i.e. all logic except proximity/phrase queries. Prior to persistence to disk, skips lists are generated for the document ids. These are persisted along with the above information and used to accelerate intersections. A postings entry for a term is shown below as persisted on disk:
+2. **Postings** - a file containing a mapping from a term to a list of the containing documents in order of document id. In addition, the collection frequency of the term is encoded along with the frequency of the term for each document (document frequency). This uses the persistent hashmap described above, where the term represents the key. Keys/terms are inserted in the order they occur. However, prior to persistence to disk they are sorted in  lexicographical order. This allows for later [merging](#merging) to occur efficiently. A postings file exists per segment. This file allows boolean queries which do not require positions to be evaluated at a lower disk access cost - i.e. all logic except proximity/phrase queries. Prior to persistence to disk, skips lists are generated for the document ids. These are persisted along with the above information and used to accelerate intersections. A postings entry for a term is shown below as persisted on disk:
 
-*TODO visual - FROM DALE*
+![image](https://user-images.githubusercontent.com/12695796/159170588-30055aef-b13e-489a-b33b-f4dc13af1e13.png)
+
 
 Note that the unstemmed form of the term is stored in the posting value. This information is currently only used for building suggestions - see [Suggestions](#suggestions).
 
