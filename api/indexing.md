@@ -74,8 +74,8 @@ At query time, the query is executed across all of the segments linearly. Each o
 
 This process is visualized below.
 
+![image](https://user-images.githubusercontent.com/12695796/159171381-14d1d869-e8c3-46fb-bf94-0085d3bc6c5a.png)
 
-*TODO visual - include segment lst*
 
 #### Merging
 
