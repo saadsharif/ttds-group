@@ -81,8 +81,8 @@ This process is visualized below.
 
 Merging addresses the challenge of an ever-increasing number of segments and its potential to negatively impact query performance. When a merge is initiated, the two smallest adjacent segments (by document count) are merged together. The resulting merged segment replaces their reference in the index. This requires a short lightweight lock, during which queries cannot execute, as the segment list is updated in the index. The original segments are in turn updated on disk. This process is shown below:
 
+![image](https://user-images.githubusercontent.com/12695796/159171094-d27c2829-79fa-4b70-b2bb-1abea5ce8dba.png)
 
-*TODO visual - include segment lst - FROM DALE*
 
 Merging can continually be called (via its [API endppoint](#api)) until there is a single segment - the most optimal index. We call this process "optimizing".
 
