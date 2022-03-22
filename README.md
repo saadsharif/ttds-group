@@ -1,2 +1,2 @@
-# ttds-group
+# Academic Paper Search Engine
 
